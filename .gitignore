@@ -1,0 +1,76 @@
+# Plugin specific
+
+# Composer
+composer.lock
+composer.json
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Build files
+/build/
+/dist/
+*.min.js
+*.min.css
+*.map
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+error_log
+debug.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.old
+*-backup
+*-old
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+/tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Deployment
+deploy.sh
+.deployment
+.ftpconfig
+sftp-config.json
+
+# Memory Bank (development only)
+.amazonq/
+
