@@ -28,19 +28,60 @@ class Calculator {
 	public static function calculate_cart_discounts( $cart_items ) {
 		$rules = Rule::get_active_rules();
 		$discounts = array();
+		$settings = self::get_settings();
 
+		// Get applicable rules
+		$applicable_rules = array();
 		foreach ( $rules as $rule ) {
 			if ( self::is_rule_applicable( $rule, $cart_items ) ) {
 				$discount = self::calculate_rule_discount( $rule, $cart_items );
 				if ( $discount > 0 ) {
-					$discounts[] = array(
-						'rule_id' => $rule->id,
-						'rule_title' => $rule->title,
-						'discount_type' => $rule->discount_type,
+					$applicable_rules[] = array(
+						'rule' => $rule,
 						'discount_amount' => $discount,
 					);
 				}
 			}
+		}
+
+		// Apply rule priority logic
+		$apply_method = $settings['apply_product_discount_to'] ?? 'biggest_discount';
+		switch ( $apply_method ) {
+			case 'biggest_discount':
+				if ( ! empty( $applicable_rules ) ) {
+					usort( $applicable_rules, function( $a, $b ) {
+						return $b['discount_amount'] <=> $a['discount_amount'];
+					});
+					$applicable_rules = array( $applicable_rules[0] );
+				}
+				break;
+			case 'lowest_discount':
+				if ( ! empty( $applicable_rules ) ) {
+					usort( $applicable_rules, function( $a, $b ) {
+						return $a['discount_amount'] <=> $b['discount_amount'];
+					});
+					$applicable_rules = array( $applicable_rules[0] );
+				}
+				break;
+			case 'first':
+				if ( ! empty( $applicable_rules ) ) {
+					$applicable_rules = array( $applicable_rules[0] );
+				}
+				break;
+			case 'all':
+				// Keep all applicable rules
+				break;
+		}
+
+		// Convert to final discount format
+		foreach ( $applicable_rules as $item ) {
+			$rule = $item['rule'];
+			$discounts[] = array(
+				'rule_id' => $rule->id,
+				'rule_title' => $rule->title,
+				'discount_type' => $rule->discount_type,
+				'discount_amount' => $item['discount_amount'],
+			);
 		}
 
 		return $discounts;
@@ -189,8 +230,17 @@ class Calculator {
 			case 'percentage':
 				$discount = self::calculate_percentage_discount( $rule, $cart_items );
 				break;
+			case 'fixed':
+				$discount = self::calculate_fixed_discount( $rule, $cart_items );
+				break;
 			case 'bulk':
 				$discount = self::calculate_bulk_discount( $rule, $cart_items );
+				break;
+			case 'cart_percentage':
+				$discount = self::calculate_cart_percentage_discount( $rule, $cart_items );
+				break;
+			case 'cart_fixed':
+				$discount = self::calculate_cart_fixed_discount( $rule, $cart_items );
 				break;
 		}
 
@@ -296,5 +346,165 @@ class Calculator {
 			}
 		}
 		return $quantity;
+	}
+
+	/**
+	 * Calculate fixed discount
+	 *
+	 * @param Rule $rule Discount rule.
+	 * @param array $cart_items Cart items.
+	 * @return float
+	 */
+	private static function calculate_fixed_discount( $rule, $cart_items ) {
+		return $rule->discount_value;
+	}
+
+	/**
+	 * Calculate cart percentage discount
+	 *
+	 * @param Rule $rule Discount rule.
+	 * @param array $cart_items Cart items.
+	 * @return float
+	 */
+	private static function calculate_cart_percentage_discount( $rule, $cart_items ) {
+		$subtotal = self::calculate_cart_subtotal( $cart_items );
+		return ( $subtotal * $rule->discount_value ) / 100;
+	}
+
+	/**
+	 * Calculate cart fixed discount
+	 *
+	 * @param Rule $rule Discount rule.
+	 * @param array $cart_items Cart items.
+	 * @return float
+	 */
+	private static function calculate_cart_fixed_discount( $rule, $cart_items ) {
+		return $rule->discount_value;
+	}
+
+	/**
+	 * Get plugin settings
+	 *
+	 * @return array
+	 */
+	private static function get_settings() {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dmwoo_settings';
+		$results = $wpdb->get_results( "SELECT option_name, option_value FROM $table", ARRAY_A );
+		
+		$settings = array();
+		foreach ( $results as $row ) {
+			$settings[ $row['option_name'] ] = maybe_unserialize( $row['option_value'] );
+		}
+		
+		return $settings;
+	}
+
+	/**
+	 * Check if product is on sale
+	 *
+	 * @param int $product_id Product ID.
+	 * @return bool
+	 */
+	public static function is_product_on_sale( $product_id ) {
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			return false;
+		}
+		
+		$rules = Rule::get_active_rules();
+		foreach ( $rules as $rule ) {
+			if ( self::product_matches_rule( $product_id, $rule ) ) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
+	/**
+	 * Check if product matches rule
+	 *
+	 * @param int $product_id Product ID.
+	 * @param Rule $rule Discount rule.
+	 * @return bool
+	 */
+	private static function product_matches_rule( $product_id, $rule ) {
+		// Check date conditions
+		if ( ! self::check_date_conditions( $rule ) ) {
+			return false;
+		}
+		
+		// Check product filters
+		if ( ! empty( $rule->filters ) ) {
+			$item = array( 'product_id' => $product_id );
+			if ( ! self::item_matches_filters( $item, $rule->filters ) ) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+
+	/**
+	 * Get product discount price
+	 *
+	 * @param int $product_id Product ID.
+	 * @param float $original_price Original price.
+	 * @param int $quantity Quantity.
+	 * @return float
+	 */
+	public static function get_product_discount_price( $product_id, $original_price, $quantity = 1 ) {
+		$rules = Rule::get_active_rules();
+		$best_discount = 0;
+		$settings = self::get_settings();
+		
+		foreach ( $rules as $rule ) {
+			if ( self::product_matches_rule( $product_id, $rule ) ) {
+				$discount = 0;
+				
+				switch ( $rule->discount_type ) {
+					case 'percentage':
+						$discount = ( $original_price * $rule->discount_value ) / 100;
+						break;
+					case 'fixed':
+						$discount = $rule->discount_value;
+						break;
+					case 'bulk':
+						$discount = self::calculate_bulk_discount_for_product( $rule, $quantity, $original_price );
+						break;
+				}
+				
+				$apply_method = $settings['apply_product_discount_to'] ?? 'biggest_discount';
+				if ( $apply_method === 'biggest_discount' && $discount > $best_discount ) {
+					$best_discount = $discount;
+				} elseif ( $apply_method === 'first' && $best_discount === 0 ) {
+					$best_discount = $discount;
+					break;
+				}
+			}
+		}
+		
+		return max( 0, $original_price - $best_discount );
+	}
+
+	/**
+	 * Calculate bulk discount for single product
+	 *
+	 * @param Rule $rule Discount rule.
+	 * @param int $quantity Quantity.
+	 * @param float $price Price.
+	 * @return float
+	 */
+	private static function calculate_bulk_discount_for_product( $rule, $quantity, $price ) {
+		$bulk_ranges = $rule->conditions['bulk_ranges'] ?? array();
+		
+		foreach ( $bulk_ranges as $range ) {
+			if ( $quantity >= $range['min'] && ( empty( $range['max'] ) || $quantity <= $range['max'] ) ) {
+				return ( $price * $range['discount'] ) / 100;
+			}
+		}
+		
+		return 0;
 	}
 }

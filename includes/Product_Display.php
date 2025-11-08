@@ -23,106 +23,203 @@ class Product_Display {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'woocommerce_single_product_summary', array( $this, 'display_bulk_discount_table' ), 25 );
-		add_filter( 'woocommerce_get_price_html', array( $this, 'modify_price_display' ), 10, 2 );
-		add_action( 'woocommerce_before_shop_loop_item_title', array( $this, 'display_sale_badge' ) );
+		// Price modifications
+		add_filter( 'woocommerce_get_price_html', array( $this, 'modify_price_html' ), 10, 2 );
+		add_filter( 'woocommerce_product_get_price', array( $this, 'modify_product_price' ), 10, 2 );
+		add_filter( 'woocommerce_product_variation_get_price', array( $this, 'modify_product_price' ), 10, 2 );
+		
+		// Sale badge
+		add_filter( 'woocommerce_product_is_on_sale', array( $this, 'modify_on_sale_status' ), 10, 2 );
+		add_filter( 'woocommerce_sale_flash', array( $this, 'modify_sale_badge' ), 10, 3 );
+		
+		// Bulk discount table
+		add_action( 'woocommerce_before_add_to_cart_form', array( $this, 'display_bulk_discount_table' ) );
+		
+		// Discount bar
+		add_action( 'woocommerce_before_add_to_cart_form', array( $this, 'display_discount_bar' ) );
 	}
 
 	/**
 	 * Display bulk discount table
 	 */
 	public function display_bulk_discount_table() {
+		if ( ! Settings::get( 'show_bulk_table', true ) ) {
+			return;
+		}
+		
 		global $product;
-
+		
 		if ( ! $product ) {
 			return;
 		}
-
+		
+		$product_id = $product->get_id();
 		$rules = Rule::get_active_rules();
 		$bulk_rules = array();
-
+		
 		foreach ( $rules as $rule ) {
-			if ( $rule->discount_type === 'bulk' && $this->product_matches_rule( $product, $rule ) ) {
+			if ( $rule->discount_type === 'bulk' && Calculator::is_product_on_sale( $product_id ) ) {
 				$bulk_rules[] = $rule;
 			}
 		}
-
+		
 		if ( empty( $bulk_rules ) ) {
 			return;
 		}
-
-		echo '<div class="dmwoo-bulk-discount-table">';
-		echo '<h4>' . __( 'Bulk Discount Pricing', 'discount-manager-woocommerce' ) . '</h4>';
+		
+		echo '<div class="dmwoo-bulk-table">';
+		echo '<h4>' . esc_html__( 'Bulk Discount', 'discount-manager-woocommerce' ) . '</h4>';
 		echo '<table class="dmwoo-discount-table">';
-		echo '<thead><tr><th>' . __( 'Quantity', 'discount-manager-woocommerce' ) . '</th><th>' . __( 'Discount', 'discount-manager-woocommerce' ) . '</th><th>' . __( 'Price', 'discount-manager-woocommerce' ) . '</th></tr></thead>';
-		echo '<tbody>';
-
+		echo '<thead><tr>';
+		echo '<th>' . esc_html__( 'Quantity', 'discount-manager-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Discount', 'discount-manager-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Price', 'discount-manager-woocommerce' ) . '</th>';
+		echo '</tr></thead><tbody>';
+		
 		foreach ( $bulk_rules as $rule ) {
-			$bulk_ranges = $rule->conditions['bulk_ranges'] ?? array();
-			foreach ( $bulk_ranges as $range ) {
-				$original_price = $product->get_price();
-				$discounted_price = $original_price * ( 1 - $range['discount'] / 100 );
-				
-				$quantity_text = $range['min'];
+			$ranges = $rule->conditions['bulk_ranges'] ?? array();
+			foreach ( $ranges as $range ) {
+				$qty_text = $range['min'];
 				if ( ! empty( $range['max'] ) ) {
-					$quantity_text .= ' - ' . $range['max'];
+					$qty_text .= ' - ' . $range['max'];
 				} else {
-					$quantity_text .= '+';
+					$qty_text .= '+';
 				}
-
+				
+				$original_price = $product->get_price();
+				$discount_amount = ( $original_price * $range['discount'] ) / 100;
+				$discounted_price = $original_price - $discount_amount;
+				
 				echo '<tr>';
-				echo '<td>' . esc_html( $quantity_text ) . '</td>';
+				echo '<td>' . esc_html( $qty_text ) . '</td>';
 				echo '<td>' . esc_html( $range['discount'] ) . '%</td>';
 				echo '<td>' . wc_price( $discounted_price ) . '</td>';
 				echo '</tr>';
 			}
 		}
-
-		echo '</tbody></table>';
-		echo '</div>';
+		
+		echo '</tbody></table></div>';
 	}
 
 	/**
-	 * Modify price display with strikethrough
+	 * Modify price HTML to show strikeout
 	 *
 	 * @param string $price_html Price HTML.
 	 * @param object $product Product object.
 	 * @return string
 	 */
-	public function modify_price_display( $price_html, $product ) {
-		if ( is_admin() || ! $product ) {
+	public function modify_price_html( $price_html, $product ) {
+		if ( ! Settings::get( 'show_strikeout', true ) ) {
 			return $price_html;
 		}
-
-		$discount = $this->get_product_discount( $product );
 		
-		if ( $discount > 0 ) {
-			$original_price = $product->get_price();
-			$discounted_price = $original_price - $discount;
-			
-			$price_html = '<del>' . wc_price( $original_price ) . '</del> ';
-			$price_html .= '<ins>' . wc_price( $discounted_price ) . '</ins>';
+		$product_id = $product->get_id();
+		$original_price = $product->get_price();
+		
+		if ( ! $original_price ) {
+			return $price_html;
 		}
-
+		
+		$discount_price = Calculator::get_product_discount_price( $product_id, $original_price );
+		
+		if ( $discount_price < $original_price ) {
+			$original_html = wc_price( $original_price );
+			$discount_html = wc_price( $discount_price );
+			
+			return '<del>' . $original_html . '</del> <ins>' . $discount_html . '</ins>';
+		}
+		
 		return $price_html;
 	}
 
 	/**
-	 * Display sale badge
+	 * Modify product price
+	 *
+	 * @param float $price Product price.
+	 * @param object $product Product object.
+	 * @return float
 	 */
-	public function display_sale_badge() {
-		global $product;
+	public function modify_product_price( $price, $product ) {
+		if ( ! Settings::get( 'enabled', true ) ) {
+			return $price;
+		}
+		
+		$product_id = $product->get_id();
+		$discount_price = Calculator::get_product_discount_price( $product_id, $price );
+		
+		return $discount_price;
+	}
 
+	/**
+	 * Modify on sale status
+	 *
+	 * @param bool $on_sale On sale status.
+	 * @param object $product Product object.
+	 * @return bool
+	 */
+	public function modify_on_sale_status( $on_sale, $product ) {
+		$badge_setting = Settings::get( 'show_sale_badge', 'disabled' );
+		
+		if ( $badge_setting === 'disabled' ) {
+			return $on_sale;
+		}
+		
+		$product_id = $product->get_id();
+		
+		if ( $badge_setting === 'when_condition_matches' ) {
+			return Calculator::is_product_on_sale( $product_id );
+		}
+		
+		if ( $badge_setting === 'at_least_has_any_rules' ) {
+			return Calculator::is_product_on_sale( $product_id ) || $on_sale;
+		}
+		
+		return $on_sale;
+	}
+
+	/**
+	 * Modify sale badge
+	 *
+	 * @param string $html Badge HTML.
+	 * @param object $post Post object.
+	 * @param object $product Product object.
+	 * @return string
+	 */
+	public function modify_sale_badge( $html, $post, $product ) {
+		$badge_setting = Settings::get( 'show_sale_badge', 'disabled' );
+		
+		if ( $badge_setting === 'disabled' ) {
+			return '';
+		}
+		
+		$product_id = $product->get_id();
+		
+		if ( Calculator::is_product_on_sale( $product_id ) ) {
+			return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-woocommerce' ) . '</span>';
+		}
+		
+		return $html;
+	}
+
+	/**
+	 * Display discount bar
+	 */
+	public function display_discount_bar() {
+		global $product;
+		
 		if ( ! $product ) {
 			return;
 		}
-
-		$discount = $this->get_product_discount( $product );
 		
-		if ( $discount > 0 ) {
-			$discount_percentage = ( $discount / $product->get_price() ) * 100;
-			echo '<span class="dmwoo-sale-badge">' . sprintf( __( '-%s%%', 'discount-manager-woocommerce' ), round( $discount_percentage ) ) . '</span>';
+		$product_id = $product->get_id();
+		
+		if ( ! Calculator::is_product_on_sale( $product_id ) ) {
+			return;
 		}
+		
+		echo '<div class="dmwoo-discount-bar">';
+		echo '<span class="dmwoo-discount-text">' . esc_html__( 'Special Discount Available!', 'discount-manager-woocommerce' ) . '</span>';
+		echo '</div>';
 	}
 
 	/**

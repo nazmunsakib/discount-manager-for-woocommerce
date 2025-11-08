@@ -35,6 +35,14 @@ class Enqueue {
 	public function admin_scripts( $hook ) {
 		// Admin app for discount manager page
 		if ( 'toplevel_page_discount-manager' === $hook ) {
+			// Enqueue Google Fonts
+			wp_enqueue_style(
+				'dmwoo-google-fonts',
+				'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap',
+				array(),
+				null
+			);
+			
 			// Enqueue WordPress React dependencies first
 			wp_enqueue_script( 'wp-element' );
 			wp_enqueue_script( 'wp-components' );

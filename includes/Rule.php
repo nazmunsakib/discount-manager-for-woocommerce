@@ -62,11 +62,151 @@ class Rule {
 	public $filters = array();
 
 	/**
+	 * Date from
+	 *
+	 * @var string
+	 */
+	public $date_from;
+
+	/**
+	 * Date to
+	 *
+	 * @var string
+	 */
+	public $date_to;
+
+	/**
+	 * Usage limit
+	 *
+	 * @var int
+	 */
+	public $usage_limit;
+
+	/**
+	 * Usage count
+	 *
+	 * @var int
+	 */
+	public $usage_count = 0;
+
+	/**
+	 * Priority
+	 *
+	 * @var int
+	 */
+	public $priority = 10;
+
+	/**
+	 * Description
+	 *
+	 * @var string
+	 */
+	public $description;
+
+	/**
 	 * Rule status
 	 *
 	 * @var string
 	 */
 	public $status = 'active';
+
+	/**
+	 * Exclusive rule
+	 *
+	 * @var bool
+	 */
+	public $exclusive = false;
+
+	/**
+	 * Bulk discount ranges
+	 *
+	 * @var array
+	 */
+	public $bulk_ranges = array();
+
+	/**
+	 * Cart label for bulk discount
+	 *
+	 * @var string
+	 */
+	public $cart_label;
+
+	/**
+	 * Apply as cart rule
+	 *
+	 * @var bool
+	 */
+	public $apply_as_cart_rule = false;
+
+	/**
+	 * Bulk operator
+	 *
+	 * @var string
+	 */
+	public $bulk_operator = 'product_cumulative';
+
+	/**
+	 * Badge settings
+	 *
+	 * @var array
+	 */
+	public $badge_settings = array();
+
+	/**
+	 * Free shipping
+	 *
+	 * @var bool
+	 */
+	public $free_shipping = false;
+
+	/**
+	 * Buy X Get Y settings
+	 *
+	 * @var array
+	 */
+	public $bxgy_settings = array();
+
+	/**
+	 * Set discount settings
+	 *
+	 * @var array
+	 */
+	public $set_discount_settings = array();
+
+	/**
+	 * Customer conditions
+	 *
+	 * @var array
+	 */
+	public $customer_conditions = array();
+
+	/**
+	 * Created by user ID
+	 *
+	 * @var int
+	 */
+	public $created_by;
+
+	/**
+	 * Created date
+	 *
+	 * @var string
+	 */
+	public $created_on;
+
+	/**
+	 * Modified by user ID
+	 *
+	 * @var int
+	 */
+	public $modified_by;
+
+	/**
+	 * Modified date
+	 *
+	 * @var string
+	 */
+	public $modified_on;
 
 	/**
 	 * Constructor
@@ -98,6 +238,20 @@ class Rule {
 		$this->usage_count = isset( $data['usage_count'] ) ? (int) $data['usage_count'] : 0;
 		$this->priority = isset( $data['priority'] ) ? (int) $data['priority'] : 10;
 		$this->status = isset( $data['status'] ) ? sanitize_text_field( $data['status'] ) : 'active';
+		$this->exclusive = isset( $data['exclusive'] ) ? (bool) $data['exclusive'] : false;
+		$this->bulk_ranges = isset( $data['bulk_ranges'] ) ? (is_string( $data['bulk_ranges'] ) ? json_decode( $data['bulk_ranges'], true ) : $data['bulk_ranges']) : array();
+		$this->cart_label = isset( $data['cart_label'] ) ? sanitize_text_field( $data['cart_label'] ) : '';
+		$this->apply_as_cart_rule = isset( $data['apply_as_cart_rule'] ) ? (bool) $data['apply_as_cart_rule'] : false;
+		$this->bulk_operator = isset( $data['bulk_operator'] ) ? sanitize_text_field( $data['bulk_operator'] ) : 'product_cumulative';
+		$this->badge_settings = isset( $data['badge_settings'] ) ? (is_string( $data['badge_settings'] ) ? json_decode( $data['badge_settings'], true ) : $data['badge_settings']) : array();
+		$this->free_shipping = isset( $data['free_shipping'] ) ? (bool) $data['free_shipping'] : false;
+		$this->bxgy_settings = isset( $data['bxgy_settings'] ) ? (is_string( $data['bxgy_settings'] ) ? json_decode( $data['bxgy_settings'], true ) : $data['bxgy_settings']) : array();
+		$this->set_discount_settings = isset( $data['set_discount_settings'] ) ? (is_string( $data['set_discount_settings'] ) ? json_decode( $data['set_discount_settings'], true ) : $data['set_discount_settings']) : array();
+		$this->customer_conditions = isset( $data['customer_conditions'] ) ? (is_string( $data['customer_conditions'] ) ? json_decode( $data['customer_conditions'], true ) : $data['customer_conditions']) : array();
+		$this->created_by = isset( $data['created_by'] ) ? (int) $data['created_by'] : get_current_user_id();
+		$this->created_on = isset( $data['created_on'] ) ? $data['created_on'] : current_time( 'mysql' );
+		$this->modified_by = isset( $data['modified_by'] ) ? (int) $data['modified_by'] : get_current_user_id();
+		$this->modified_on = isset( $data['modified_on'] ) ? $data['modified_on'] : current_time( 'mysql' );
 	}
 
 	/**
@@ -119,20 +273,40 @@ class Rule {
 			'date_from' => $this->date_from ?: null,
 			'date_to' => $this->date_to ?: null,
 			'usage_limit' => $this->usage_limit ?: null,
+			'usage_count' => $this->usage_count,
 			'priority' => $this->priority,
 			'status' => $this->status,
+			'exclusive' => $this->exclusive ? 1 : 0,
+			'bulk_ranges' => wp_json_encode( $this->bulk_ranges ),
+			'cart_label' => $this->cart_label,
+			'apply_as_cart_rule' => $this->apply_as_cart_rule ? 1 : 0,
+			'bulk_operator' => $this->bulk_operator,
+			'badge_settings' => wp_json_encode( $this->badge_settings ),
+			'free_shipping' => $this->free_shipping ? 1 : 0,
+			'bxgy_settings' => wp_json_encode( $this->bxgy_settings ),
+			'set_discount_settings' => wp_json_encode( $this->set_discount_settings ),
+			'customer_conditions' => wp_json_encode( $this->customer_conditions ),
+			'created_by' => $this->created_by,
+			'created_on' => $this->created_on,
+			'modified_by' => get_current_user_id(),
+			'modified_on' => current_time( 'mysql' ),
 		);
 
 		if ( $this->id ) {
 			$result = $wpdb->update( $table, $data, array( 'id' => $this->id ) );
-			return $result !== false ? $this->id : false;
+			if ( $result === false ) {
+				error_log( 'DMWOO Rule Update Error: ' . $wpdb->last_error );
+				return false;
+			}
+			return $this->id;
 		} else {
 			$result = $wpdb->insert( $table, $data );
-			if ( $result ) {
-				$this->id = $wpdb->insert_id;
-				return $this->id;
+			if ( $result === false ) {
+				error_log( 'DMWOO Rule Insert Error: ' . $wpdb->last_error );
+				return false;
 			}
-			return false;
+			$this->id = $wpdb->insert_id;
+			return $this->id;
 		}
 	}
 

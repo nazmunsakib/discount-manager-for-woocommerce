@@ -72,6 +72,18 @@ class REST_API {
 			'callback' => array( $this, 'get_categories' ),
 			'permission_callback' => array( $this, 'check_permissions' ),
 		) );
+
+		register_rest_route( 'dmwoo/v1', '/rules/(?P<id>\d+)/duplicate', array(
+			'methods' => 'POST',
+			'callback' => array( $this, 'duplicate_rule' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+		) );
+
+		register_rest_route( 'dmwoo/v1', '/customers', array(
+			'methods' => 'GET',
+			'callback' => array( $this, 'get_customers' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+		) );
 	}
 
 	/**
@@ -131,6 +143,7 @@ class REST_API {
 		$rule->discount_value = floatval( $params['discount_value'] );
 		$rule->conditions = $params['conditions'] ?? array();
 		$rule->filters = $params['filters'] ?? array();
+		$rule->customer_conditions = $params['customer_conditions'] ?? array();
 		$rule->status = sanitize_text_field( $params['status'] ?? 'active' );
 		
 		$rule_id = $rule->save();
@@ -146,26 +159,36 @@ class REST_API {
 	 * Update rule
 	 */
 	public function update_rule( $request ) {
-		$rule = Rule::get( $request['id'] );
-		
-		if ( ! $rule ) {
-			return new \WP_Error( 'rule_not_found', 'Rule not found', array( 'status' => 404 ) );
+		try {
+			$rule = Rule::get( $request['id'] );
+			
+			if ( ! $rule ) {
+				return new \WP_Error( 'rule_not_found', 'Rule not found', array( 'status' => 404 ) );
+			}
+			
+			$params = $request->get_json_params();
+			
+			$rule->title = sanitize_text_field( $params['title'] );
+			$rule->description = sanitize_textarea_field( $params['description'] ?? '' );
+			$rule->discount_type = sanitize_text_field( $params['discount_type'] );
+			$rule->discount_value = floatval( $params['discount_value'] );
+			$rule->conditions = $params['conditions'] ?? array();
+			$rule->filters = $params['filters'] ?? array();
+			$rule->customer_conditions = $params['customer_conditions'] ?? array();
+			$rule->usage_limit = isset( $params['usage_limit'] ) && $params['usage_limit'] ? intval( $params['usage_limit'] ) : null;
+			$rule->priority = intval( $params['priority'] ?? 10 );
+			$rule->status = sanitize_text_field( $params['status'] ?? 'active' );
+			
+			if ( $rule->save() ) {
+				return rest_ensure_response( array( 'message' => 'Rule updated successfully' ) );
+			}
+			
+			return new \WP_Error( 'update_failed', 'Failed to update rule', array( 'status' => 500 ) );
+			
+		} catch ( Exception $e ) {
+			error_log( 'DMWOO Update Error: ' . $e->getMessage() );
+			return new \WP_Error( 'update_error', $e->getMessage(), array( 'status' => 500 ) );
 		}
-		
-		$params = $request->get_json_params();
-		
-		$rule->title = sanitize_text_field( $params['title'] );
-		$rule->discount_type = sanitize_text_field( $params['discount_type'] );
-		$rule->discount_value = floatval( $params['discount_value'] );
-		$rule->conditions = $params['conditions'] ?? array();
-		$rule->filters = $params['filters'] ?? array();
-		$rule->status = sanitize_text_field( $params['status'] ?? 'active' );
-		
-		if ( $rule->save() ) {
-			return rest_ensure_response( array( 'message' => 'Rule updated successfully' ) );
-		}
-		
-		return new \WP_Error( 'update_failed', 'Failed to update rule', array( 'status' => 500 ) );
 	}
 
 	/**
@@ -193,7 +216,7 @@ class REST_API {
 		
 		$args = array(
 			'post_type' => 'product',
-			'posts_per_page' => 20,
+			'posts_per_page' => 10,
 			'post_status' => 'publish',
 		);
 		
@@ -204,11 +227,29 @@ class REST_API {
 		$products = get_posts( $args );
 		$result = array();
 		
-		foreach ( $products as $product ) {
-			$result[] = array(
-				'id' => $product->ID,
-				'title' => $product->post_title,
-			);
+		foreach ( $products as $product_post ) {
+			$product = wc_get_product( $product_post->ID );
+			if ( $product ) {
+				$price = $product->get_price();
+				$regular_price = $product->get_regular_price();
+				$sale_price = $product->get_sale_price();
+				
+				$price_text = '';
+				if ( $sale_price && $sale_price < $regular_price ) {
+					$price_text = wc_price( $sale_price ) . ' (was ' . wc_price( $regular_price ) . ')';
+				} elseif ( $price ) {
+					$price_text = wc_price( $price );
+				} else {
+					$price_text = __( 'Price not set', 'discount-manager-woocommerce' );
+				}
+				
+				$result[] = array(
+					'id' => $product->get_id(),
+					'name' => $product->get_name(),
+					'price' => strip_tags( $price_text ),
+					'sku' => $product->get_sku(),
+				);
+			}
 		}
 		
 		return rest_ensure_response( $result );
@@ -229,6 +270,64 @@ class REST_API {
 			$result[] = array(
 				'id' => $category->term_id,
 				'name' => $category->name,
+			);
+		}
+		
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Duplicate rule
+	 */
+	public function duplicate_rule( $request ) {
+		$original_rule = Rule::get( $request['id'] );
+		
+		if ( ! $original_rule ) {
+			return new \WP_Error( 'rule_not_found', 'Rule not found', array( 'status' => 404 ) );
+		}
+		
+		$new_rule = new Rule();
+		$new_rule->title = $original_rule->title . ' (Copy)';
+		$new_rule->discount_type = $original_rule->discount_type;
+		$new_rule->discount_value = $original_rule->discount_value;
+		$new_rule->conditions = $original_rule->conditions;
+		$new_rule->filters = $original_rule->filters;
+		$new_rule->status = 'inactive';
+		
+		$rule_id = $new_rule->save();
+		
+		if ( $rule_id ) {
+			return rest_ensure_response( array( 'id' => $rule_id, 'message' => 'Rule duplicated successfully' ) );
+		}
+		
+		return new \WP_Error( 'duplicate_failed', 'Failed to duplicate rule', array( 'status' => 500 ) );
+	}
+
+	/**
+	 * Get customers for select
+	 */
+	public function get_customers( $request ) {
+		$search = $request->get_param( 'search' );
+		
+		$args = array(
+			'number' => 10,
+			'orderby' => 'display_name',
+			'order' => 'ASC',
+		);
+		
+		if ( $search ) {
+			$args['search'] = '*' . $search . '*';
+			$args['search_columns'] = array( 'user_login', 'user_email', 'display_name' );
+		}
+		
+		$users = get_users( $args );
+		$result = array();
+		
+		foreach ( $users as $user ) {
+			$result[] = array(
+				'id' => $user->ID,
+				'name' => $user->display_name,
+				'email' => $user->user_email,
 			);
 		}
 		

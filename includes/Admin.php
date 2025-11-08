@@ -24,6 +24,7 @@ class Admin {
 	 */
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
+		add_action( 'admin_head', array( $this, 'remove_notices' ) );
 	}
 
 	/**
@@ -42,6 +43,17 @@ class Admin {
 	}
 
 
+
+	/**
+	 * Remove admin notices from plugin pages
+	 */
+	public function remove_notices() {
+		$screen = get_current_screen();
+		if ( $screen && strpos( $screen->id, 'discount-manager' ) !== false ) {
+			remove_all_actions( 'admin_notices' );
+			remove_all_actions( 'all_admin_notices' );
+		}
+	}
 
 	/**
 	 * Admin page content

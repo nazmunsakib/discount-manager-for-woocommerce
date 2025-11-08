@@ -81,6 +81,8 @@ class Discount_Manager {
 	 */
 	public function includes() {
 		include_once DMWOO_PLUGIN_PATH . 'includes/Database.php';
+		include_once DMWOO_PLUGIN_PATH . 'includes/Database_Update.php';
+		include_once DMWOO_PLUGIN_PATH . 'includes/Settings.php';
 		include_once DMWOO_PLUGIN_PATH . 'includes/Rule.php';
 		include_once DMWOO_PLUGIN_PATH . 'includes/Calculator.php';
 		include_once DMWOO_PLUGIN_PATH . 'includes/Cart_Handler.php';
@@ -104,6 +106,9 @@ class Discount_Manager {
 	 * Init plugin when WordPress initializes
 	 */
 	public function init() {
+		// Update database schema if needed
+		Database_Update::update_schema();
+		
 		// Initialize REST API
 		new REST_API();
 
@@ -134,6 +139,8 @@ class Discount_Manager {
 	 */
 	public function activate() {
 		Database::create_tables();
+		Database_Update::update_schema();
+		Settings::init_defaults();
 		// Add option to track activation
 		update_option( 'dmwoo_activated', time() );
 	}

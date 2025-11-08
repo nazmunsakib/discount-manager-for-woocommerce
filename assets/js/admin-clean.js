@@ -34,6 +34,7 @@
             var onDelete = props.onDelete;
             var onAdd = props.onAdd;
             var onToggleStatus = props.onToggleStatus;
+            var onDuplicate = props.onDuplicate;
             
             return createElement('div', { className: 'dmwoo-rules-container' },
                 createElement('div', { className: 'dmwoo-header' },
@@ -81,6 +82,11 @@
                                             size: 'small',
                                             onClick: function() { onEdit(rule); }
                                         }, __('Edit', 'discount-manager-woocommerce')),
+                                        createElement(Button, {
+                                            variant: 'secondary',
+                                            size: 'small',
+                                            onClick: function() { onDuplicate(rule.id); }
+                                        }, __('Duplicate', 'discount-manager-woocommerce')),
                                         createElement(Button, {
                                             variant: 'link',
                                             isDestructive: true,
@@ -137,13 +143,53 @@
             var priority = priorityState[0];
             var setPriority = priorityState[1];
             
-            var bulkRangesState = useState(
-                rule && rule.conditions && rule.conditions.bulk_ranges ? 
-                    rule.conditions.bulk_ranges : 
-                    [{ min: 1, max: '', discount: 10 }]
-            );
-            var bulkRanges = bulkRangesState[0];
-            var setBulkRanges = bulkRangesState[1];
+            var applyToState = useState(rule && rule.filters ? rule.filters.apply_to : 'all_products');
+            var productSearchState = useState('');
+            var searchResultsState = useState([]);
+            var selectedProductsState = useState(rule && rule.filters && rule.filters.selected_products ? rule.filters.selected_products : []);
+            var filterMethodState = useState(rule && rule.filters ? rule.filters.filter_method : 'include');
+            
+
+            
+            function searchProducts(query) {
+                if (query.length < 3) {
+                    searchResultsState[1]([]);
+                    return;
+                }
+                
+                wp.apiFetch({
+                    path: '/dmwoo/v1/products?search=' + encodeURIComponent(query)
+                })
+                .then(function(products) {
+                    searchResultsState[1](products);
+                })
+                .catch(function(error) {
+                    console.error('Error searching products:', error);
+                    searchResultsState[1]([]);
+                });
+            }
+            
+            function addSelectedProduct(product) {
+                var currentSelected = selectedProductsState[0];
+                var isAlreadySelected = currentSelected.some(function(p) { return p.id === product.id; });
+                
+                if (!isAlreadySelected) {
+                    selectedProductsState[1](currentSelected.concat([product]));
+                }
+                
+                productSearchState[1]('');
+                searchResultsState[1]([]);
+            }
+            
+            function removeSelectedProduct(productId) {
+                var currentSelected = selectedProductsState[0];
+                var filtered = currentSelected.filter(function(p) { return p.id !== productId; });
+                selectedProductsState[1](filtered);
+            }
+            
+
+            
+
             
             function handleSave() {
                 if (!title.trim()) {
@@ -156,10 +202,15 @@
                     description: description.trim(),
                     discount_type: discountType,
                     discount_value: discountValue,
+                    filters: {
+                        apply_to: applyToState[0],
+                        filter_method: applyToState[0] === 'specific_products' ? filterMethodState[0] : 'include',
+                        selected_products: applyToState[0] === 'specific_products' ? selectedProductsState[0] : []
+                    },
+
                     conditions: {
                         min_subtotal: minSubtotal ? parseFloat(minSubtotal) : null,
-                        min_quantity: minQuantity ? parseInt(minQuantity) : null,
-                        bulk_ranges: discountType === 'bulk' ? bulkRanges : null
+                        min_quantity: minQuantity ? parseInt(minQuantity) : null
                     },
                     usage_limit: usageLimit ? parseInt(usageLimit) : null,
                     priority: priority,
@@ -169,21 +220,7 @@
                 onSave(data);
             }
             
-            function addBulkRange() {
-                setBulkRanges(bulkRanges.concat([{ min: '', max: '', discount: 0 }]));
-            }
-            
-            function updateBulkRange(index, field, value) {
-                var newRanges = bulkRanges.slice();
-                newRanges[index][field] = value;
-                setBulkRanges(newRanges);
-            }
-            
-            function removeBulkRange(index) {
-                if (bulkRanges.length > 1) {
-                    setBulkRanges(bulkRanges.filter(function(_, i) { return i !== index; }));
-                }
-            }
+
             
             return createElement('div', { className: 'dmwoo-form-container' },
                 createElement('h2', null, rule ? __('Edit Rule', 'discount-manager-woocommerce') : __('Add New Rule', 'discount-manager-woocommerce')),
@@ -229,7 +266,7 @@
                         value: discountType,
                         options: [
                             { label: __('Percentage Discount', 'discount-manager-woocommerce'), value: 'percentage' },
-                            { label: __('Bulk Discount', 'discount-manager-woocommerce'), value: 'bulk' }
+                            { label: __('Fixed Discount', 'discount-manager-woocommerce'), value: 'fixed' }
                         ],
                         onChange: setDiscountType
                     }),
@@ -244,42 +281,97 @@
                         step: 0.01
                     }),
                     
-                    discountType === 'bulk' && createElement('div', { className: 'dmwoo-bulk-section' },
-                        createElement('h4', null, __('Bulk Discount Ranges', 'discount-manager-woocommerce')),
-                        bulkRanges.map(function(range, index) {
-                            return createElement('div', { key: index, className: 'dmwoo-bulk-range' },
-                                createElement(TextControl, {
-                                    label: __('Min Qty', 'discount-manager-woocommerce'),
-                                    type: 'number',
-                                    value: range.min,
-                                    onChange: function(value) { updateBulkRange(index, 'min', parseInt(value) || 0); }
-                                }),
-                                createElement(TextControl, {
-                                    label: __('Max Qty', 'discount-manager-woocommerce'),
-                                    type: 'number',
-                                    value: range.max,
-                                    onChange: function(value) { updateBulkRange(index, 'max', value ? parseInt(value) : ''); },
-                                    placeholder: __('Unlimited', 'discount-manager-woocommerce')
-                                }),
-                                createElement(TextControl, {
-                                    label: __('Discount %', 'discount-manager-woocommerce'),
-                                    type: 'number',
-                                    value: range.discount,
-                                    onChange: function(value) { updateBulkRange(index, 'discount', parseFloat(value) || 0); },
-                                    min: 0,
-                                    max: 100
-                                }),
-                                bulkRanges.length > 1 && createElement(Button, {
-                                    variant: 'link',
-                                    isDestructive: true,
-                                    onClick: function() { removeBulkRange(index); }
-                                }, __('Remove', 'discount-manager-woocommerce'))
-                            );
-                        }),
-                        createElement(Button, {
-                            variant: 'secondary',
-                            onClick: addBulkRange
-                        }, __('Add Range', 'discount-manager-woocommerce'))
+                    discountType === 'fixed' && createElement(TextControl, {
+                        label: __('Fixed Discount Amount', 'discount-manager-woocommerce'),
+                        type: 'number',
+                        value: discountValue,
+                        onChange: function(value) { setDiscountValue(parseFloat(value) || 0); },
+                        min: 0,
+                        step: 0.01
+                    }),
+                    
+
+                ),
+                
+                // Filter Section
+                createElement('div', { className: 'dmwoo-form-section' },
+                    createElement('h3', null, __('Product Selection', 'discount-manager-woocommerce')),
+                    createElement('p', { style: { marginBottom: '15px', color: '#646970' } }, 
+                        __('Choose which products get the discount', 'discount-manager-woocommerce')
+                    ),
+                    createElement('div', { className: 'dmwoo-conditions-grid' },
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Apply to', 'discount-manager-woocommerce')),
+                            createElement('select', {
+                                value: applyToState[0],
+                                onChange: function(e) { applyToState[1](e.target.value); }
+                            },
+                                createElement('option', { value: 'all_products' }, __('All products', 'discount-manager-woocommerce')),
+                                createElement('option', { value: 'specific_products' }, __('Specific products', 'discount-manager-woocommerce'))
+                            )
+                        ),
+                        applyToState[0] === 'specific_products' && createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Filter method', 'discount-manager-woocommerce')),
+                            createElement('select', {
+                                value: filterMethodState[0],
+                                onChange: function(e) { filterMethodState[1](e.target.value); }
+                            },
+                                createElement('option', { value: 'include' }, __('Include selected products', 'discount-manager-woocommerce')),
+                                createElement('option', { value: 'exclude' }, __('Exclude selected products', 'discount-manager-woocommerce'))
+                            ),
+                            createElement('p', { 
+                                className: 'dmwoo-filter-instruction' + (filterMethodState[0] === 'exclude' ? ' exclude' : '')
+                            }, 
+                                filterMethodState[0] === 'include' ? 
+                                    __('✓ Discount will apply ONLY to the selected products', 'discount-manager-woocommerce') :
+                                    __('✗ Discount will apply to ALL products EXCEPT the selected ones', 'discount-manager-woocommerce')
+                            )
+                        )
+                    ),
+                    applyToState[0] === 'specific_products' && createElement('div', { className: 'dmwoo-product-selector' },
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Search and select products', 'discount-manager-woocommerce')),
+                            createElement('input', {
+                                type: 'text',
+                                placeholder: __('Type to search products...', 'discount-manager-woocommerce'),
+                                value: productSearchState[0],
+                                onChange: function(e) { 
+                                    productSearchState[1](e.target.value);
+                                    if (e.target.value.length > 2) {
+                                        searchProducts(e.target.value);
+                                    }
+                                },
+                                className: 'dmwoo-product-search'
+                            })
+                        ),
+                        searchResultsState[0].length > 0 && createElement('div', { className: 'dmwoo-search-results' },
+                            searchResultsState[0].map(function(product) {
+                                return createElement('div', {
+                                    key: product.id,
+                                    className: 'dmwoo-search-result',
+                                    onClick: function() { addSelectedProduct(product); }
+                                },
+                                    createElement('span', { className: 'product-name' }, product.name),
+                                    createElement('span', { className: 'product-price' }, product.price)
+                                );
+                            })
+                        ),
+                        selectedProductsState[0].length > 0 && createElement('div', { className: 'dmwoo-selected-products' },
+                            createElement('h4', null, __('Selected Products', 'discount-manager-woocommerce')),
+                            selectedProductsState[0].map(function(product) {
+                                return createElement('div', {
+                                    key: product.id,
+                                    className: 'dmwoo-selected-product'
+                                },
+                                    createElement('span', { className: 'product-name' }, product.name),
+                                    createElement('button', {
+                                        type: 'button',
+                                        className: 'dmwoo-remove-product',
+                                        onClick: function() { removeSelectedProduct(product.id); }
+                                    }, '×')
+                                );
+                            })
+                        )
                     )
                 ),
                 
@@ -301,7 +393,8 @@
                             onChange: setMinQuantity,
                             placeholder: __('No minimum', 'discount-manager-woocommerce')
                         })
-                    )
+                    ),
+
                 ),
                 
                 // Advanced
@@ -339,6 +432,194 @@
             );
         }
         
+        // Settings Component
+        function Settings() {
+            var enabledState = useState(true);
+            var enabled = enabledState[0];
+            var setEnabled = enabledState[1];
+            
+            var calculateFromState = useState('sale_price');
+            var calculateFrom = calculateFromState[0];
+            var setCalculateFrom = calculateFromState[1];
+            
+            var applyRulesState = useState('biggest_discount');
+            var applyRules = applyRulesState[0];
+            var setApplyRules = applyRulesState[1];
+            
+            var couponBehaviorState = useState('run_both');
+            var couponBehavior = couponBehaviorState[0];
+            var setCouponBehavior = couponBehaviorState[1];
+            
+            var showBulkTableState = useState(true);
+            var showBulkTable = showBulkTableState[0];
+            var setShowBulkTable = showBulkTableState[1];
+            
+            var showSaleBadgeState = useState('disabled');
+            var showSaleBadge = showSaleBadgeState[0];
+            var setShowSaleBadge = showSaleBadgeState[1];
+            
+            var showStrikeoutState = useState(true);
+            var showStrikeout = showStrikeoutState[0];
+            var setShowStrikeout = showStrikeoutState[1];
+            
+            var showSavingsState = useState('disabled');
+            var showSavings = showSavingsState[0];
+            var setShowSavings = showSavingsState[1];
+            
+            var noticeState = useState(null);
+            var notice = noticeState[0];
+            var setNotice = noticeState[1];
+            
+            function handleSave() {
+                setNotice({ type: 'success', message: __('Settings saved successfully', 'discount-manager-woocommerce') });
+            }
+            
+            return createElement('div', { className: 'dmwoo-settings-container' },
+                notice && createElement(Notice, {
+                    status: notice.type,
+                    onRemove: function() { setNotice(null); },
+                    isDismissible: true
+                }, notice.message),
+                
+                createElement('div', { className: 'dmwoo-settings-grid' },
+                    // General Settings
+                    createElement('div', { className: 'dmwoo-form-section' },
+                    createElement('h3', null, 
+                        createElement('span', { className: 'dashicons dashicons-admin-settings' }),
+                        ' ' + __('General Settings', 'discount-manager-woocommerce')
+                    ),
+                    createElement('div', { className: 'dmwoo-form-toggle' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Enable Discount Manager', 'discount-manager-woocommerce')),
+                        createElement('div', { className: 'dmwoo-toggle-container' },
+                            createElement('label', { className: 'dmwoo-toggle-switch' },
+                                createElement('input', {
+                                    type: 'checkbox',
+                                    checked: enabled,
+                                    onChange: function(e) { setEnabled(e.target.checked); }
+                                }),
+                                createElement('span', { className: 'dmwoo-toggle-slider' }),
+                                createElement('span', { className: 'dmwoo-toggle-label' }, 
+                                    enabled ? __('Enabled', 'discount-manager-woocommerce') : __('Disabled', 'discount-manager-woocommerce')
+                                )
+                            )
+                        )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-field' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Calculate discount from', 'discount-manager-woocommerce')),
+                        createElement('select', {
+                            value: calculateFrom,
+                            onChange: function(e) { setCalculateFrom(e.target.value); }
+                        },
+                            createElement('option', { value: 'sale_price' }, __('Sale price', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'regular_price' }, __('Regular price', 'discount-manager-woocommerce'))
+                        )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-field' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Apply discount rules', 'discount-manager-woocommerce')),
+                        createElement('select', {
+                            value: applyRules,
+                            onChange: function(e) { setApplyRules(e.target.value); }
+                        },
+                            createElement('option', { value: 'biggest_discount' }, __('Biggest discount from matched rules', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'lowest_discount' }, __('Lowest discount from matched rules', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'first' }, __('First matched rule', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'all' }, __('All matched rules', 'discount-manager-woocommerce'))
+                        )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-field' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Coupon behavior', 'discount-manager-woocommerce')),
+                        createElement('select', {
+                            value: couponBehavior,
+                            onChange: function(e) { setCouponBehavior(e.target.value); }
+                        },
+                            createElement('option', { value: 'run_both' }, __('Let both coupons and discount rules work together', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'disable_coupon' }, __('Disable coupons when discount rules apply', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'disable_rules' }, __('Disable discount rules when coupons apply', 'discount-manager-woocommerce'))
+                        )
+                    )
+                    ),
+                    
+                    // Product Settings
+                    createElement('div', { className: 'dmwoo-form-section' },
+                    createElement('h3', null, 
+                        createElement('span', { className: 'dashicons dashicons-products' }),
+                        ' ' + __('Product Settings', 'discount-manager-woocommerce')
+                    ),
+                    createElement('div', { className: 'dmwoo-form-field' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('On-sale badge', 'discount-manager-woocommerce')),
+                        createElement('select', {
+                            value: showSaleBadge,
+                            onChange: function(e) { setShowSaleBadge(e.target.value); }
+                        },
+                            createElement('option', { value: 'when_condition_matches' }, __('Show when rule condition matches', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'at_least_has_any_rules' }, __('Show on products covered by any rule', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'disabled' }, __('Do not show', 'discount-manager-woocommerce'))
+                        )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-toggle' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Show bulk discount table', 'discount-manager-woocommerce')),
+                        createElement('div', { className: 'dmwoo-toggle-container' },
+                            createElement('label', { className: 'dmwoo-toggle-switch' },
+                                createElement('input', {
+                                    type: 'checkbox',
+                                    checked: showBulkTable,
+                                    onChange: function(e) { setShowBulkTable(e.target.checked); }
+                                }),
+                                createElement('span', { className: 'dmwoo-toggle-slider' }),
+                                createElement('span', { className: 'dmwoo-toggle-label' }, 
+                                    showBulkTable ? __('Show', 'discount-manager-woocommerce') : __('Hide', 'discount-manager-woocommerce')
+                                )
+                            )
+                        )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-toggle' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Show strikeout price', 'discount-manager-woocommerce')),
+                        createElement('div', { className: 'dmwoo-toggle-container' },
+                            createElement('label', { className: 'dmwoo-toggle-switch' },
+                                createElement('input', {
+                                    type: 'checkbox',
+                                    checked: showStrikeout,
+                                    onChange: function(e) { setShowStrikeout(e.target.checked); }
+                                }),
+                                createElement('span', { className: 'dmwoo-toggle-slider' }),
+                                createElement('span', { className: 'dmwoo-toggle-label' }, 
+                                    showStrikeout ? __('Show', 'discount-manager-woocommerce') : __('Hide', 'discount-manager-woocommerce')
+                                )
+                            )
+                        )
+                    )
+                    ),
+                    
+                    // Promotion Settings
+                    createElement('div', { className: 'dmwoo-form-section' },
+                    createElement('h3', null, 
+                        createElement('span', { className: 'dashicons dashicons-megaphone' }),
+                        ' ' + __('Promotion Settings', 'discount-manager-woocommerce')
+                    ),
+                    createElement('div', { className: 'dmwoo-form-field' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Show "You saved" text', 'discount-manager-woocommerce')),
+                        createElement('select', {
+                            value: showSavings,
+                            onChange: function(e) { setShowSavings(e.target.value); }
+                        },
+                            createElement('option', { value: 'disabled' }, __('Disabled', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'on_each_line_item' }, __('On each line item', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'after_total' }, __('After cart total', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'both' }, __('Both line item and after total', 'discount-manager-woocommerce'))
+                        )
+                    )
+                    )
+                ),
+                
+                createElement('div', { className: 'dmwoo-form-actions' },
+                    createElement(Button, {
+                        variant: 'primary',
+                        onClick: handleSave
+                    }, __('Save Settings', 'discount-manager-woocommerce'))
+                )
+            );
+        }
+        
         // Main App Component
         function App() {
             var rulesState = useState([]);
@@ -356,6 +637,10 @@
             var showFormState = useState(false);
             var showForm = showFormState[0];
             var setShowForm = showFormState[1];
+            
+            var activeTabState = useState('rules');
+            var activeTab = activeTabState[0];
+            var setActiveTab = activeTabState[1];
             
             var noticeState = useState(null);
             var notice = noticeState[0];
@@ -449,6 +734,21 @@
                 });
             }
             
+            function handleDuplicateRule(ruleId) {
+                wp.apiFetch({
+                    path: '/dmwoo/v1/rules/' + ruleId + '/duplicate',
+                    method: 'POST'
+                })
+                .then(function() {
+                    setNotice({ type: 'success', message: __('Rule duplicated successfully', 'discount-manager-woocommerce') });
+                    loadRules();
+                })
+                .catch(function(error) {
+                    console.error('DMWOO: Error duplicating rule:', error);
+                    setNotice({ type: 'error', message: __('Failed to duplicate rule', 'discount-manager-woocommerce') });
+                });
+            }
+            
             if (loading) {
                 return createElement('div', { className: 'dmwoo-loading' }, 
                     __('Loading discount rules...', 'discount-manager-woocommerce')
@@ -456,34 +756,55 @@
             }
             
             return createElement('div', { className: 'dmwoo-app' },
-                notice && createElement(Notice, {
-                    status: notice.type,
-                    onRemove: function() { setNotice(null); },
-                    isDismissible: true
-                }, notice.message),
-                
-                showForm ? 
-                    createElement(RuleForm, {
-                        rule: editingRule,
-                        onSave: handleSaveRule,
-                        onCancel: function() {
-                            setShowForm(false);
-                            setEditingRule(null);
-                        }
-                    }) :
-                    createElement(RulesList, {
-                        rules: rules,
-                        onEdit: function(rule) {
-                            setEditingRule(rule);
-                            setShowForm(true);
-                        },
-                        onDelete: handleDeleteRule,
-                        onAdd: function() {
-                            setEditingRule(null);
-                            setShowForm(true);
-                        },
-                        onToggleStatus: handleToggleStatus
-                    })
+                // Tab Navigation
+                createElement('div', { className: 'dmwoo-tabs' },
+                    createElement('div', { className: 'dmwoo-tab-nav' },
+                        createElement('button', {
+                            className: 'dmwoo-tab-button' + (activeTab === 'rules' ? ' active' : ''),
+                            onClick: function() { setActiveTab('rules'); }
+                        }, __('Discount Rules', 'discount-manager-woocommerce')),
+                        createElement('button', {
+                            className: 'dmwoo-tab-button' + (activeTab === 'settings' ? ' active' : ''),
+                            onClick: function() { setActiveTab('settings'); }
+                        }, __('Settings', 'discount-manager-woocommerce'))
+                    ),
+                    
+                    createElement('div', { className: 'dmwoo-tab-content' },
+                        notice && createElement(Notice, {
+                            status: notice.type,
+                            onRemove: function() { setNotice(null); },
+                            isDismissible: true
+                        }, notice.message),
+                        
+                        activeTab === 'rules' && (
+                            showForm ? 
+                                createElement(RuleForm, {
+                                    rule: editingRule,
+                                    onSave: handleSaveRule,
+                                    onCancel: function() {
+                                        setShowForm(false);
+                                        setEditingRule(null);
+                                    }
+                                }) :
+                                createElement(RulesList, {
+                                    rules: rules,
+                                    onEdit: function(rule) {
+                                        setEditingRule(rule);
+                                        setShowForm(true);
+                                    },
+                                    onDelete: handleDeleteRule,
+                                    onAdd: function() {
+                                        setEditingRule(null);
+                                        setShowForm(true);
+                                    },
+                                    onToggleStatus: handleToggleStatus,
+                                    onDuplicate: handleDuplicateRule
+                                })
+                        ),
+                        
+                        activeTab === 'settings' && createElement(Settings)
+                    )
+                )
             );
         }
         

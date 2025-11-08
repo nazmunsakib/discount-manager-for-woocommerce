@@ -1,187 +1,135 @@
 /**
- * Simple Admin App - WordPress Native React
+ * Simple Admin Interface - Debug Version
  */
 (function() {
-    console.log('DMWOO: Simple admin script loading...');
+    console.log('DMWOO Simple: Loading...');
     
-    const { createElement, useState, useEffect } = wp.element;
-    const { Button, Card, CardBody, TextControl, SelectControl } = wp.components;
-    const { __ } = wp.i18n;
-
-    // Simple Rules List
-    const SimpleRulesList = ({ rules, onAddNew }) => {
-        return createElement('div', { className: 'dmwoo-simple-rules' },
-            createElement('div', { className: 'dmwoo-header' },
-                createElement('h2', null, __('Discount Rules', 'discount-manager-woocommerce')),
-                createElement(Button, {
-                    variant: 'primary',
-                    onClick: onAddNew
-                }, __('Add New Rule', 'discount-manager-woocommerce'))
-            ),
-            rules.length === 0 ? 
-                createElement('p', null, __('No rules found. Create your first discount rule!', 'discount-manager-woocommerce')) :
-                createElement('div', { className: 'dmwoo-rules-grid' },
-                    rules.map(rule => 
-                        createElement(Card, { key: rule.id },
-                            createElement(CardBody, null,
-                                createElement('h3', null, rule.title),
-                                createElement('p', null, `${rule.discount_value}% ${rule.discount_type} discount`),
-                                createElement('span', { className: `dmwoo-status-${rule.status}` }, rule.status)
-                            )
-                        )
-                    )
-                )
-        );
-    };
-
-    // Simple Add Rule Form
-    const SimpleAddForm = ({ onSave, onCancel }) => {
-        const [title, setTitle] = useState('');
-        const [discountValue, setDiscountValue] = useState(10);
-
-        const handleSave = () => {
-            if (!title.trim()) {
-                alert(__('Please enter a rule title', 'discount-manager-woocommerce'));
+    function createSimpleInterface() {
+        const container = document.getElementById('dmwoo-admin-root');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div style="padding: 20px;">
+                <h2>Discount Rules</h2>
+                <button id="add-rule-btn" class="button button-primary">Add New Rule</button>
+                <div id="rules-container" style="margin-top: 20px;">
+                    <p>Loading rules...</p>
+                </div>
+            </div>
+        `;
+        
+        loadAndDisplayRules();
+    }
+    
+    async function loadAndDisplayRules() {
+        const container = document.getElementById('rules-container');
+        if (!container) return;
+        
+        try {
+            const response = await wp.apiFetch({
+                path: '/dmwoo/v1/rules'
+            });
+            
+            console.log('Rules loaded:', response);
+            
+            if (response.length === 0) {
+                container.innerHTML = '<p>No rules found. Create your first discount rule!</p>';
                 return;
             }
             
-            onSave({
-                title: title.trim(),
-                discount_type: 'percentage',
-                discount_value: discountValue,
-                status: 'active'
+            let html = `
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            response.forEach(rule => {
+                html += `
+                    <tr>
+                        <td>${rule.title}</td>
+                        <td>${rule.discount_type}</td>
+                        <td>${rule.discount_value}${rule.discount_type === 'percentage' ? '%' : ''}</td>
+                        <td><span style="padding: 2px 8px; border-radius: 3px; background: ${rule.status === 'active' ? '#46b450' : '#ccc'}; color: white; font-size: 12px;">${rule.status}</span></td>
+                        <td>
+                            <button class="button button-small edit-btn" data-id="${rule.id}">Edit</button>
+                            <button class="button button-small duplicate-btn" data-id="${rule.id}">Duplicate</button>
+                            <button class="button button-small delete-btn" data-id="${rule.id}" style="color: #d63638;">Delete</button>
+                        </td>
+                    </tr>
+                `;
             });
-        };
-
-        return createElement('div', { className: 'dmwoo-add-form' },
-            createElement('h2', null, __('Add New Discount Rule', 'discount-manager-woocommerce')),
             
-            createElement(TextControl, {
-                label: __('Rule Title', 'discount-manager-woocommerce'),
-                value: title,
-                onChange: setTitle,
-                placeholder: __('e.g., Summer Sale 20% Off', 'discount-manager-woocommerce')
-            }),
+            html += '</tbody></table>';
+            container.innerHTML = html;
             
-            createElement(TextControl, {
-                label: __('Discount Percentage', 'discount-manager-woocommerce'),
-                type: 'number',
-                value: discountValue,
-                onChange: (value) => setDiscountValue(parseFloat(value) || 0),
-                min: 0,
-                max: 100
-            }),
-            
-            createElement('div', { className: 'dmwoo-form-buttons' },
-                createElement(Button, {
-                    variant: 'primary',
-                    onClick: handleSave
-                }, __('Save Rule', 'discount-manager-woocommerce')),
-                createElement(Button, {
-                    variant: 'secondary',
-                    onClick: onCancel
-                }, __('Cancel', 'discount-manager-woocommerce'))
-            )
-        );
-    };
-
-    // Main Simple App
-    const SimpleApp = () => {
-        const [rules, setRules] = useState([]);
-        const [loading, setLoading] = useState(true);
-        const [showAddForm, setShowAddForm] = useState(false);
-        const [message, setMessage] = useState('');
-
-        // Load rules
-        useEffect(() => {
-            loadRules();
-        }, []);
-
-        const loadRules = async () => {
-            try {
-                console.log('DMWOO: Loading rules...');
-                const response = await wp.apiFetch({ path: '/dmwoo/v1/rules' });
-                console.log('DMWOO: Rules loaded:', response);
-                setRules(response || []);
-            } catch (error) {
-                console.error('DMWOO: Error loading rules:', error);
-                setMessage('Error loading rules: ' + error.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const handleSaveRule = async (ruleData) => {
-            try {
-                console.log('DMWOO: Saving rule:', ruleData);
-                await wp.apiFetch({
-                    path: '/dmwoo/v1/rules',
-                    method: 'POST',
-                    data: ruleData
+            // Add event listeners
+            container.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    console.log('Edit rule:', e.target.dataset.id);
                 });
-                setMessage('Rule created successfully!');
-                setShowAddForm(false);
-                loadRules();
-            } catch (error) {
-                console.error('DMWOO: Error saving rule:', error);
-                setMessage('Error saving rule: ' + error.message);
-            }
-        };
-
-        if (loading) {
-            return createElement('div', { className: 'dmwoo-loading' }, 
-                __('Loading...', 'discount-manager-woocommerce')
-            );
-        }
-
-        return createElement('div', { className: 'dmwoo-simple-app' },
-            message && createElement('div', { 
-                className: message.includes('Error') ? 'notice notice-error' : 'notice notice-success',
-                style: { margin: '10px 0' }
-            }, createElement('p', null, message)),
+            });
             
-            showAddForm ? 
-                createElement(SimpleAddForm, {
-                    onSave: handleSaveRule,
-                    onCancel: () => setShowAddForm(false)
-                }) :
-                createElement(SimpleRulesList, {
-                    rules: rules,
-                    onAddNew: () => setShowAddForm(true)
-                })
-        );
-    };
-
-    // Initialize
-    function initSimpleApp() {
-        console.log('DMWOO: Initializing simple app...');
-        
-        const container = document.getElementById('dmwoo-admin-root');
-        if (!container) {
-            console.error('DMWOO: Container not found');
-            return;
-        }
-
-        if (typeof wp === 'undefined' || typeof wp.element === 'undefined') {
-            console.error('DMWOO: WordPress React not available');
-            container.innerHTML = '<div class="notice notice-error"><p>WordPress React components not loaded. <a href="?page=discount-manager&fallback=1">Use simple interface</a></p></div>';
-            return;
-        }
-
-        try {
-            console.log('DMWOO: Rendering simple app...');
-            wp.element.render(createElement(SimpleApp), container);
-            console.log('DMWOO: Simple app rendered successfully');
+            container.querySelectorAll('.duplicate-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const ruleId = e.target.dataset.id;
+                    console.log('Duplicate rule:', ruleId);
+                    
+                    try {
+                        await wp.apiFetch({
+                            path: `/dmwoo/v1/rules/${ruleId}/duplicate`,
+                            method: 'POST'
+                        });
+                        loadAndDisplayRules();
+                        alert('Rule duplicated successfully!');
+                    } catch (error) {
+                        console.error('Error duplicating rule:', error);
+                        alert('Error duplicating rule');
+                    }
+                });
+            });
+            
+            container.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const ruleId = e.target.dataset.id;
+                    
+                    if (!confirm('Are you sure you want to delete this rule?')) {
+                        return;
+                    }
+                    
+                    try {
+                        await wp.apiFetch({
+                            path: `/dmwoo/v1/rules/${ruleId}`,
+                            method: 'DELETE'
+                        });
+                        loadAndDisplayRules();
+                        alert('Rule deleted successfully!');
+                    } catch (error) {
+                        console.error('Error deleting rule:', error);
+                        alert('Error deleting rule');
+                    }
+                });
+            });
+            
         } catch (error) {
-            console.error('DMWOO: Error rendering simple app:', error);
-            container.innerHTML = '<div class="notice notice-error"><p>Error: ' + error.message + '</p></div>';
+            console.error('Error loading rules:', error);
+            container.innerHTML = '<p>Error loading rules. Check console for details.</p>';
         }
     }
-
-    // Initialize when ready
+    
+    // Initialize
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSimpleApp);
+        document.addEventListener('DOMContentLoaded', createSimpleInterface);
     } else {
-        initSimpleApp();
+        createSimpleInterface();
     }
+    
+    setTimeout(createSimpleInterface, 1000);
 })();
