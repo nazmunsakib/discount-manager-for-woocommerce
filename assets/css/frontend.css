@@ -1,0 +1,57 @@
+/* Discount Manager Frontend Styles */
+
+.dmwoo-bulk-discount-table {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f9f9f9;
+}
+
+.dmwoo-bulk-discount-table h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.dmwoo-discount-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dmwoo-discount-table th,
+.dmwoo-discount-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.dmwoo-discount-table th {
+    background: #f0f0f0;
+    font-weight: bold;
+}
+
+.dmwoo-sale-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #e74c3c;
+    color: white;
+    padding: 5px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10;
+}
+
+.dmwoo-savings-message {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+.dmwoo-savings-message strong {
+    font-size: 16px;
+}

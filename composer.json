@@ -1,0 +1,24 @@
+{
+    "name": "nazmunsakib/discount-manager-woocommerce",
+    "description": "Simple to complex discount rules for your WooCommerce store",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Nazmun Sakib",
+            "email": "contact@nazmunsakib.com",
+            "homepage": "https://nazmunsakib.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dmwoo\\": "includes/"
+        }
+    }
+}
