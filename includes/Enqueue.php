@@ -82,7 +82,7 @@ class Enqueue {
 
 		wp_enqueue_script(
 			'dmwoo-admin-app',
-			DMWOO_PLUGIN_URL . 'assets/js/admin-fixed.js',
+			DMWOO_PLUGIN_URL . 'assets/js/admin-clean.js',
 			array( 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch' ),
 			DMWOO_VERSION,
 			true

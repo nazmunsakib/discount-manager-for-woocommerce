@@ -399,3 +399,105 @@
     font-size: 16px;
     color: #646970;
 }
+
+/* Toggle Switch Styles */
+.dmwoo-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dmwoo-toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 8px;
+}
+
+.dmwoo-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.dmwoo-toggle-slider {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background-color: #ccd0d4;
+    border-radius: 24px;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+}
+
+.dmwoo-toggle-slider:before {
+    content: '';
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.dmwoo-toggle-switch input:checked + .dmwoo-toggle-slider {
+    background-color: #00a32a;
+}
+
+.dmwoo-toggle-switch input:checked + .dmwoo-toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.dmwoo-toggle-switch:hover .dmwoo-toggle-slider {
+    box-shadow: 0 0 0 2px rgba(0, 163, 42, 0.2);
+}
+
+.dmwoo-toggle-switch input:checked:hover + .dmwoo-toggle-slider {
+    background-color: #008a00;
+}
+
+.dmwoo-toggle-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1d2327;
+    min-width: 45px;
+}
+
+.dmwoo-toggle-switch input:checked ~ .dmwoo-toggle-label {
+    color: #00a32a;
+}
+
+.dmwoo-toggle-switch input:not(:checked) ~ .dmwoo-toggle-label {
+    color: #8c8f94;
+}
+
+/* Form Toggle Styles */
+.dmwoo-form-toggle {
+    margin-bottom: 16px;
+}
+
+.dmwoo-form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #1d2327;
+    font-size: 13px;
+}
+
+.dmwoo-form-toggle .dmwoo-toggle-container {
+    margin-top: 4px;
+}
+
+.dmwoo-form-toggle .dmwoo-toggle-switch {
+    padding: 8px 0;
+}
+
+.dmwoo-form-toggle .dmwoo-toggle-label {
+    font-size: 13px;
+    font-weight: 500;
+}
