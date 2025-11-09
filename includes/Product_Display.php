@@ -38,74 +38,13 @@ class Product_Display {
 		add_filter( 'woocommerce_product_is_on_sale', array( $this, 'modify_on_sale_status' ), 10, 2 );
 		add_filter( 'woocommerce_sale_flash', array( $this, 'modify_sale_badge' ), 10, 3 );
 		
-		// Bulk discount table
-		add_action( 'woocommerce_before_add_to_cart_form', array( $this, 'display_bulk_discount_table' ) );
+
 		
 		// Discount bar
 		add_action( 'woocommerce_before_add_to_cart_form', array( $this, 'display_discount_bar' ) );
 	}
 
-	/**
-	 * Display bulk discount table
-	 */
-	public function display_bulk_discount_table() {
-		if ( ! Settings::get( 'show_bulk_table', true ) ) {
-			return;
-		}
-		
-		global $product;
-		
-		if ( ! $product ) {
-			return;
-		}
-		
-		$product_id = $product->get_id();
-		$rules = Rule::get_active_rules();
-		$bulk_rules = array();
-		
-		foreach ( $rules as $rule ) {
-			if ( $rule->discount_type === 'bulk' && Calculator::is_product_on_sale( $product_id ) ) {
-				$bulk_rules[] = $rule;
-			}
-		}
-		
-		if ( empty( $bulk_rules ) ) {
-			return;
-		}
-		
-		echo '<div class="dmwoo-bulk-table">';
-		echo '<h4>' . esc_html__( 'Bulk Discount', 'discount-manager-woocommerce' ) . '</h4>';
-		echo '<table class="dmwoo-discount-table">';
-		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Quantity', 'discount-manager-woocommerce' ) . '</th>';
-		echo '<th>' . esc_html__( 'Discount', 'discount-manager-woocommerce' ) . '</th>';
-		echo '<th>' . esc_html__( 'Price', 'discount-manager-woocommerce' ) . '</th>';
-		echo '</tr></thead><tbody>';
-		
-		foreach ( $bulk_rules as $rule ) {
-			$ranges = $rule->conditions['bulk_ranges'] ?? array();
-			foreach ( $ranges as $range ) {
-				$qty_text = $range['min'];
-				if ( ! empty( $range['max'] ) ) {
-					$qty_text .= ' - ' . $range['max'];
-				} else {
-					$qty_text .= '+';
-				}
-				
-				$original_price = $product->get_price();
-				$discount_amount = ( $original_price * $range['discount'] ) / 100;
-				$discounted_price = $original_price - $discount_amount;
-				
-				echo '<tr>';
-				echo '<td>' . esc_html( $qty_text ) . '</td>';
-				echo '<td>' . esc_html( $range['discount'] ) . '%</td>';
-				echo '<td>' . wc_price( $discounted_price ) . '</td>';
-				echo '</tr>';
-			}
-		}
-		
-		echo '</tbody></table></div>';
-	}
+
 
 	/**
 	 * Modify price HTML to show strikeout

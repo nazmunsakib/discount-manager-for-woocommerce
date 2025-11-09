@@ -115,8 +115,6 @@ class Settings {
 			'display_percentage_on_sale_badge' => false,
 			'on_sale_badge_html' => '<span class="onsale">Sale!</span>',
 			'on_sale_badge_percentage_html' => '<span class="onsale">{{percentage}}%</span>',
-			'show_bulk_table' => true,
-			'position_to_show_bulk_table' => 'woocommerce_before_add_to_cart_form',
 			'position_to_show_discount_bar' => 'woocommerce_before_add_to_cart_form',
 			'modify_price_at_shop_page' => true,
 			'modify_price_at_product_page' => true,

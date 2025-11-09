@@ -483,9 +483,7 @@
             var couponBehavior = couponBehaviorState[0];
             var setCouponBehavior = couponBehaviorState[1];
             
-            var showBulkTableState = useState(true);
-            var showBulkTable = showBulkTableState[0];
-            var setShowBulkTable = showBulkTableState[1];
+
             
             var showSaleBadgeState = useState('disabled');
             var showSaleBadge = showSaleBadgeState[0];
@@ -520,7 +518,7 @@
                         if (settings.calculate_from) setCalculateFrom(settings.calculate_from);
                         if (settings.apply_product_discount_to) setApplyRules(settings.apply_product_discount_to);
                         if (settings.show_sale_badge) setShowSaleBadge(settings.show_sale_badge);
-                        if (settings.show_bulk_table !== undefined) setShowBulkTable(settings.show_bulk_table);
+
                         if (settings.show_strikeout !== undefined) setShowStrikeout(settings.show_strikeout);
 
                     })
@@ -532,7 +530,7 @@
                     calculate_from: calculateFrom,
                     apply_product_discount_to: applyRules,
                     show_sale_badge: showSaleBadge,
-                    show_bulk_table: showBulkTable,
+
                     show_strikeout: showStrikeout,
 
                 };
@@ -640,22 +638,7 @@
                             __('Display "Sale!" badge on products with active discount rules.', 'discount-manager-woocommerce')
                         )
                     ),
-                    createElement('div', { className: 'dmwoo-form-toggle' },
-                        createElement('label', { className: 'dmwoo-form-label' }, __('Show bulk discount table', 'discount-manager-woocommerce')),
-                        createElement('div', { className: 'dmwoo-toggle-container' },
-                            createElement('label', { className: 'dmwoo-toggle-switch' },
-                                createElement('input', {
-                                    type: 'checkbox',
-                                    checked: showBulkTable,
-                                    onChange: function(e) { setShowBulkTable(e.target.checked); }
-                                }),
-                                createElement('span', { className: 'dmwoo-toggle-slider' }),
-                                createElement('span', { className: 'dmwoo-toggle-label' }, 
-                                    showBulkTable ? __('Show', 'discount-manager-woocommerce') : __('Hide', 'discount-manager-woocommerce')
-                                )
-                            )
-                        )
-                    ),
+
                     createElement('div', { className: 'dmwoo-form-toggle' },
                         createElement('label', { className: 'dmwoo-form-label' }, __('Show strikeout price', 'discount-manager-woocommerce')),
                         createElement('div', { className: 'dmwoo-toggle-container' },
