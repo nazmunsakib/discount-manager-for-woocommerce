@@ -26,6 +26,7 @@ class Cart_Handler {
 		add_action( 'woocommerce_before_calculate_totals', array( $this, 'apply_cart_discounts' ), 10, 1 );
 		add_action( 'woocommerce_review_order_before_payment', array( $this, 'display_savings_message' ) );
 		add_filter( 'woocommerce_cart_item_price', array( $this, 'modify_cart_item_price' ), 10, 3 );
+		add_action( 'woocommerce_checkout_order_processed', array( $this, 'increment_rule_usage' ), 10, 1 );
 	}
 
 	/**
@@ -40,6 +41,8 @@ class Cart_Handler {
 			return;
 		}
 
+		$applied_rules = array();
+		
 		foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
 			$product = $cart_item['data'];
 			$product_id = $product->get_id();
@@ -52,12 +55,15 @@ class Cart_Handler {
 				$base_price = $product->get_regular_price();
 			}
 			
-			$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product );
+			$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product, 1, $applied_rules );
 			
 			if ( $discount_price < $base_price ) {
 				$product->set_price( $discount_price );
 			}
 		}
+		
+		// Store applied rules for usage tracking on order completion
+		WC()->session->set( 'dmwoo_applied_rule_ids', array_unique( $applied_rules ) );
 	}
 
 	/**
@@ -96,5 +102,28 @@ class Cart_Handler {
 	public function modify_cart_item_price( $price_html, $cart_item, $cart_item_key ) {
 		$product = $cart_item['data'];
 		return wc_price( $product->get_price() );
+	}
+
+	/**
+	 * Increment usage count for applied rules on order completion
+	 *
+	 * @param int $order_id Order ID.
+	 */
+	public function increment_rule_usage( $order_id ) {
+		$applied_rule_ids = WC()->session->get( 'dmwoo_applied_rule_ids', array() );
+		
+		if ( empty( $applied_rule_ids ) ) {
+			return;
+		}
+		
+		foreach ( $applied_rule_ids as $rule_id ) {
+			$rule = Rule::get( $rule_id );
+			if ( $rule ) {
+				$rule->increment_usage();
+			}
+		}
+		
+		// Clear session
+		WC()->session->set( 'dmwoo_applied_rule_ids', array() );
 	}
 }

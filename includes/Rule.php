@@ -338,10 +338,34 @@ class Rule {
 
 		$rules = array();
 		foreach ( $results as $data ) {
-			$rules[] = new self( $data );
+			$rule = new self( $data );
+			// Check usage limit
+			if ( $rule->usage_limit && $rule->usage_count >= $rule->usage_limit ) {
+				continue; // Skip rules that have reached usage limit
+			}
+			$rules[] = $rule;
 		}
 
 		return $rules;
+	}
+
+	/**
+	 * Increment usage count
+	 *
+	 * @return bool
+	 */
+	public function increment_usage() {
+		if ( ! $this->id ) {
+			return false;
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'dmwoo_rules';
+		
+		return $wpdb->query( $wpdb->prepare(
+			"UPDATE $table SET usage_count = usage_count + 1 WHERE id = %d",
+			$this->id
+		) ) !== false;
 	}
 
 	/**

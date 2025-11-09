@@ -471,9 +471,10 @@ class Calculator {
 	 * @param float $original_price Original price.
 	 * @param object $product Product object.
 	 * @param int $quantity Quantity.
+	 * @param array &$applied_rules Reference to track applied rule IDs.
 	 * @return float
 	 */
-	public static function get_product_discount_price( $product_id, $original_price, $product = null, $quantity = 1 ) {
+	public static function get_product_discount_price( $product_id, $original_price, $product = null, $quantity = 1, &$applied_rules = array() ) {
 		if ( ! $original_price || $original_price <= 0 ) {
 			return $original_price;
 		}
@@ -488,87 +489,69 @@ class Calculator {
 		}
 		
 		$best_discount = 0;
+		$best_price = $original_price;
 		$settings = self::get_settings();
+		$apply_method = $settings['apply_product_discount_to'] ?? 'biggest_discount';
 		
 		foreach ( $rules as $rule ) {
 			if ( self::product_matches_rule( $product_id, $rule ) ) {
-				$discount = 0;
+				$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
+				
+				if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+					$base_price = $product->get_sale_price();
+				} else {
+					$base_price = $product->get_regular_price();
+				}
+				
+				if ( ! $base_price ) {
+					$base_price = $original_price;
+				}
+				
+				$new_price = $base_price;
 				
 				switch ( $rule->discount_type ) {
 					case 'percentage':
-						// Get base price from global settings for percentage discounts
-						$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
-						
-						if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
-							// Calculate from sale price
-							$base_price = $product->get_sale_price();
-						} else {
-							// Calculate from regular price
-							$base_price = $product->get_regular_price();
-						}
-						
-						if ( ! $base_price ) {
-							$base_price = $original_price;
-						}
-						
-						// Calculate discount and apply to base price (not original price)
 						$discount_amount = ( $base_price * $rule->discount_value ) / 100;
 						$new_price = $base_price - $discount_amount;
-						$discount = $original_price - $new_price;
 						break;
 					case 'fixed':
-						// Get base price from global settings for fixed discounts
-						$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
-						
-						if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
-							$base_price = $product->get_sale_price();
-						} else {
-							$base_price = $product->get_regular_price();
-						}
-						
-						if ( ! $base_price ) {
-							$base_price = $original_price;
-						}
-						
-						// Calculate new price after fixed discount
 						$new_price = max( 0, $base_price - $rule->discount_value );
-						// Return directly for fixed discounts
-						return $new_price;
 						break;
 					case 'bulk':
-						$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
-						
-						if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
-							$base_price = $product->get_sale_price();
-						} else {
-							$base_price = $product->get_regular_price();
-						}
-						
-						if ( ! $base_price ) {
-							$base_price = $original_price;
-						}
-						
 						$discount_amount = self::calculate_bulk_discount_for_product( $rule, $quantity, $base_price );
 						$new_price = $base_price - $discount_amount;
-						$discount = $original_price - $new_price;
 						break;
 				}
 				
-				$apply_method = $settings['apply_product_discount_to'] ?? 'biggest_discount';
-				if ( $apply_method === 'biggest_discount' && $discount > $best_discount ) {
-					$best_discount = $discount;
-				} elseif ( $apply_method === 'first' && $best_discount === 0 ) {
-					$best_discount = $discount;
-					break;
+				$discount = $base_price - $new_price;
+				
+				if ( $apply_method === 'first' ) {
+					$applied_rules = array( $rule->id );
+					return $new_price;
+				} elseif ( $apply_method === 'all' ) {
+					$best_discount += $discount;
+					$applied_rules[] = $rule->id;
+				} elseif ( $apply_method === 'biggest_discount' ) {
+					if ( $discount > $best_discount ) {
+						$best_discount = $discount;
+						$best_price = $new_price;
+						$applied_rules = array( $rule->id );
+					}
+				} elseif ( $apply_method === 'lowest_discount' ) {
+					if ( $best_discount === 0 || $discount < $best_discount ) {
+						$best_discount = $discount;
+						$best_price = $new_price;
+						$applied_rules = array( $rule->id );
+					}
 				}
 			}
 		}
 		
-		if ( $best_discount > 0 ) {
-			return max( 0, $original_price - $best_discount );
+		if ( $apply_method === 'all' && $best_discount > 0 ) {
+			return max( 0, $base_price - $best_discount );
 		}
 		
-		return $original_price;
+		return $best_price;
 	}
 
 	/**

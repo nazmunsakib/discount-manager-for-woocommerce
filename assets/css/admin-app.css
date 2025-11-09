@@ -697,6 +697,15 @@
     color: #1d2327;
 }
 
+/* Field Help Text */
+.dmwoo-field-help {
+    font-size: 12px;
+    color: #646970;
+    margin: 6px 0 0 0;
+    line-height: 1.5;
+    font-style: italic;
+}
+
 /* Delete Modal Styles */
 .dmwoo-delete-modal .components-modal__content {
     padding: 24px;

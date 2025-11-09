@@ -428,8 +428,12 @@
                                 type: 'number',
                                 value: usageLimit,
                                 onChange: function(e) { setUsageLimit(e.target.value); },
-                                placeholder: __('Unlimited', 'discount-manager-woocommerce')
-                            })
+                                placeholder: __('Unlimited', 'discount-manager-woocommerce'),
+                                min: 0
+                            }),
+                            createElement('p', { className: 'dmwoo-field-help' }, 
+                                __('Maximum number of times this discount can be used. Leave empty for unlimited usage.', 'discount-manager-woocommerce')
+                            )
                         ),
                         createElement('div', { className: 'dmwoo-form-field' },
                             createElement('label', { className: 'dmwoo-form-label' }, __('Priority', 'discount-manager-woocommerce')),
@@ -437,8 +441,12 @@
                                 type: 'number',
                                 value: priority,
                                 onChange: function(e) { setPriority(parseInt(e.target.value) || 10); },
-                                placeholder: __('Lower numbers = higher priority', 'discount-manager-woocommerce')
-                            })
+                                min: 1,
+                                max: 999
+                            }),
+                            createElement('p', { className: 'dmwoo-field-help' }, 
+                                __('Lower numbers = higher priority. When multiple rules match, lower priority number applies first. Default: 10', 'discount-manager-woocommerce')
+                            )
                         )
                     )
                 ),
@@ -512,13 +520,15 @@
                 wp.apiFetch({ path: '/dmwoo/v1/settings' })
                     .then(function(settings) {
                         if (settings.calculate_from) setCalculateFrom(settings.calculate_from);
+                        if (settings.apply_product_discount_to) setApplyRules(settings.apply_product_discount_to);
                     })
                     .catch(function(error) {});
             }
             
             function handleSave() {
                 var settings = {
-                    calculate_from: calculateFrom
+                    calculate_from: calculateFrom,
+                    apply_product_discount_to: applyRules
                 };
                 
                 wp.apiFetch({
@@ -582,10 +592,13 @@
                             value: applyRules,
                             onChange: function(e) { setApplyRules(e.target.value); }
                         },
+                            createElement('option', { value: 'first' }, __('First matched rule (respects priority)', 'discount-manager-woocommerce')),
                             createElement('option', { value: 'biggest_discount' }, __('Biggest discount from matched rules', 'discount-manager-woocommerce')),
                             createElement('option', { value: 'lowest_discount' }, __('Lowest discount from matched rules', 'discount-manager-woocommerce')),
-                            createElement('option', { value: 'first' }, __('First matched rule', 'discount-manager-woocommerce')),
                             createElement('option', { value: 'all' }, __('All matched rules', 'discount-manager-woocommerce'))
+                        ),
+                        createElement('p', { className: 'dmwoo-field-help' }, 
+                            __('Choose "First matched rule" to respect priority settings. Rules are checked in priority order (lower number first).', 'discount-manager-woocommerce')
                         )
                     ),
                     createElement('div', { className: 'dmwoo-select-wrapper' },
