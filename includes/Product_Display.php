@@ -55,7 +55,7 @@ class Product_Display {
 	 */
 	public function modify_price_html( $price_html, $product ) {
 		$product_id = $product->get_id();
-		$show_strikeout = Settings::get( 'show_strikeout', true );
+		$show_strikeout = Settings::get( 'show_strikeout', 1 );
 		
 		// Get base price based on settings
 		$calculate_from = Settings::get( 'calculate_from', 'regular_price' );
@@ -72,7 +72,7 @@ class Product_Display {
 		$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product );
 		
 		if ( $discount_price < $base_price ) {
-			if ( $show_strikeout ) {
+			if ( $show_strikeout == 1 || $show_strikeout === true ) {
 				return '<del>' . wc_price( $base_price ) . '</del> <ins>' . wc_price( $discount_price ) . '</ins>';
 			} else {
 				return wc_price( $discount_price );

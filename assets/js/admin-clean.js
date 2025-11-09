@@ -489,7 +489,7 @@
             var showSaleBadge = showSaleBadgeState[0];
             var setShowSaleBadge = showSaleBadgeState[1];
             
-            var showStrikeoutState = useState(true);
+            var showStrikeoutState = useState(false);
             var showStrikeout = showStrikeoutState[0];
             var setShowStrikeout = showStrikeoutState[1];
             
@@ -518,9 +518,9 @@
                         if (settings.calculate_from) setCalculateFrom(settings.calculate_from);
                         if (settings.apply_product_discount_to) setApplyRules(settings.apply_product_discount_to);
                         if (settings.show_sale_badge) setShowSaleBadge(settings.show_sale_badge);
-
-                        if (settings.show_strikeout !== undefined) setShowStrikeout(settings.show_strikeout);
-
+                        if (settings.show_strikeout !== undefined) {
+                            setShowStrikeout(settings.show_strikeout == 1 || settings.show_strikeout === true);
+                        }
                     })
                     .catch(function(error) {});
             }
