@@ -27,6 +27,12 @@ class Product_Display {
 		add_filter( 'woocommerce_get_price_html', array( $this, 'modify_price_html' ), 10, 2 );
 		add_filter( 'woocommerce_product_get_price', array( $this, 'modify_product_price' ), 10, 2 );
 		add_filter( 'woocommerce_product_variation_get_price', array( $this, 'modify_product_price' ), 10, 2 );
+		add_filter( 'woocommerce_product_get_regular_price', array( $this, 'modify_product_price' ), 10, 2 );
+		add_filter( 'woocommerce_product_variation_get_regular_price', array( $this, 'modify_product_price' ), 10, 2 );
+		
+		// Remove sale price to prevent double discounting
+		add_filter( 'woocommerce_product_get_sale_price', array( $this, 'remove_sale_price' ), 10, 2 );
+		add_filter( 'woocommerce_product_variation_get_sale_price', array( $this, 'remove_sale_price' ), 10, 2 );
 		
 		// Sale badge
 		add_filter( 'woocommerce_product_is_on_sale', array( $this, 'modify_on_sale_status' ), 10, 2 );
@@ -114,22 +120,40 @@ class Product_Display {
 		}
 		
 		$product_id = $product->get_id();
-		$original_price = $product->get_price();
 		
-		if ( ! $original_price ) {
+		// Get base price based on settings
+		$calculate_from = Settings::get( 'calculate_from', 'regular_price' );
+		if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+			$base_price = $product->get_sale_price();
+		} else {
+			$base_price = $product->get_regular_price();
+		}
+		
+		if ( ! $base_price ) {
 			return $price_html;
 		}
 		
-		$discount_price = Calculator::get_product_discount_price( $product_id, $original_price );
+		$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product );
 		
-		if ( $discount_price < $original_price ) {
-			$original_html = wc_price( $original_price );
+		if ( $discount_price < $base_price ) {
+			$original_html = wc_price( $base_price );
 			$discount_html = wc_price( $discount_price );
 			
 			return '<del>' . $original_html . '</del> <ins>' . $discount_html . '</ins>';
 		}
 		
 		return $price_html;
+	}
+
+	/**
+	 * Remove sale price to prevent double discounting
+	 *
+	 * @param float $sale_price Sale price.
+	 * @param object $product Product object.
+	 * @return float
+	 */
+	public function remove_sale_price( $sale_price, $product ) {
+		return $sale_price;
 	}
 
 	/**
@@ -140,14 +164,7 @@ class Product_Display {
 	 * @return float
 	 */
 	public function modify_product_price( $price, $product ) {
-		if ( ! Settings::get( 'enabled', true ) ) {
-			return $price;
-		}
-		
-		$product_id = $product->get_id();
-		$discount_price = Calculator::get_product_discount_price( $product_id, $price );
-		
-		return $discount_price;
+		return $price;
 	}
 
 	/**

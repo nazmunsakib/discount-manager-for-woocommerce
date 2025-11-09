@@ -23,38 +23,41 @@ class Cart_Handler {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'woocommerce_cart_calculate_fees', array( $this, 'apply_cart_discounts' ) );
+		add_action( 'woocommerce_before_calculate_totals', array( $this, 'apply_cart_discounts' ), 10, 1 );
 		add_action( 'woocommerce_review_order_before_payment', array( $this, 'display_savings_message' ) );
+		add_filter( 'woocommerce_cart_item_price', array( $this, 'modify_cart_item_price' ), 10, 3 );
 	}
 
 	/**
 	 * Apply cart discounts
 	 */
-	public function apply_cart_discounts() {
+	public function apply_cart_discounts( $cart ) {
 		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
 			return;
 		}
 
-		if ( ! WC()->cart ) {
+		if ( did_action( 'woocommerce_before_calculate_totals' ) >= 2 ) {
 			return;
 		}
 
-		$cart_items = WC()->cart->get_cart();
-		if ( empty( $cart_items ) ) {
-			return;
+		foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
+			$product = $cart_item['data'];
+			$product_id = $product->get_id();
+			
+			// Get base price based on settings
+			$calculate_from = Settings::get( 'calculate_from', 'regular_price' );
+			if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+				$base_price = $product->get_sale_price();
+			} else {
+				$base_price = $product->get_regular_price();
+			}
+			
+			$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product );
+			
+			if ( $discount_price < $base_price ) {
+				$product->set_price( $discount_price );
+			}
 		}
-
-		$discounts = Calculator::calculate_cart_discounts( $cart_items );
-		
-		foreach ( $discounts as $discount ) {
-			WC()->cart->add_fee( 
-				sprintf( __( 'Discount: %s', 'discount-manager-woocommerce' ), $discount['rule_title'] ),
-				-$discount['discount_amount']
-			);
-		}
-
-		// Store discounts in session for display
-		WC()->session->set( 'dmwoo_applied_discounts', $discounts );
 	}
 
 	/**
@@ -80,5 +83,18 @@ class Cart_Handler {
 			) . '</strong>';
 			echo '</div>';
 		}
+	}
+
+	/**
+	 * Modify cart item price display
+	 *
+	 * @param string $price_html Price HTML.
+	 * @param array $cart_item Cart item.
+	 * @param string $cart_item_key Cart item key.
+	 * @return string
+	 */
+	public function modify_cart_item_price( $price_html, $cart_item, $cart_item_key ) {
+		$product = $cart_item['data'];
+		return wc_price( $product->get_price() );
 	}
 }

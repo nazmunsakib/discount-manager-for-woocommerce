@@ -84,6 +84,19 @@ class REST_API {
 			'callback' => array( $this, 'get_customers' ),
 			'permission_callback' => array( $this, 'check_permissions' ),
 		) );
+
+		register_rest_route( 'dmwoo/v1', '/settings', array(
+			array(
+				'methods' => 'GET',
+				'callback' => array( $this, 'get_settings' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			),
+			array(
+				'methods' => 'POST',
+				'callback' => array( $this, 'save_settings' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			),
+		) );
 	}
 
 	/**
@@ -332,5 +345,26 @@ class REST_API {
 		}
 		
 		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Get settings
+	 */
+	public function get_settings( $request ) {
+		$settings = Settings::get_all();
+		return rest_ensure_response( $settings );
+	}
+
+	/**
+	 * Save settings
+	 */
+	public function save_settings( $request ) {
+		$params = $request->get_json_params();
+		
+		foreach ( $params as $key => $value ) {
+			Settings::set( $key, $value );
+		}
+		
+		return rest_ensure_response( array( 'message' => 'Settings saved successfully' ) );
 	}
 }

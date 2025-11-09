@@ -113,5 +113,6 @@ class Database {
 
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_rule_usage" );
 		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_rules" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_settings" );
 	}
 }

@@ -30,6 +30,12 @@ class Settings {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dmwoo_settings';
 		
+		// Check if table exists
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table;
+		if ( ! $table_exists ) {
+			return $default;
+		}
+		
 		$value = $wpdb->get_var( $wpdb->prepare(
 			"SELECT option_value FROM $table WHERE option_name = %s",
 			$key

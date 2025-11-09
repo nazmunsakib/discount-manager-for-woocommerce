@@ -176,8 +176,8 @@ class Calculator {
 	 * @return bool
 	 */
 	private static function check_product_filters( $rule, $cart_items ) {
-		if ( empty( $rule->filters ) ) {
-			return true; // No filters means apply to all products
+		if ( empty( $rule->filters ) || ( isset( $rule->filters['apply_to'] ) && $rule->filters['apply_to'] === 'all_products' ) ) {
+			return true; // No filters or apply to all products
 		}
 
 		// Check if any cart item matches the filters
@@ -199,17 +199,24 @@ class Calculator {
 	 */
 	private static function item_matches_filters( $item, $filters ) {
 		$product_id = $item['product_id'];
-
-		// Check specific products
-		if ( ! empty( $filters['products'] ) && in_array( $product_id, $filters['products'] ) ) {
+		
+		// If apply_to is all_products, match all
+		if ( isset( $filters['apply_to'] ) && $filters['apply_to'] === 'all_products' ) {
 			return true;
 		}
-
-		// Check categories
-		if ( ! empty( $filters['categories'] ) ) {
-			$product_categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
-			if ( array_intersect( $filters['categories'], $product_categories ) ) {
-				return true;
+		
+		// Check specific products
+		if ( isset( $filters['apply_to'] ) && $filters['apply_to'] === 'specific_products' ) {
+			$selected_products = isset( $filters['selected_products'] ) ? $filters['selected_products'] : array();
+			$product_ids = array_map( function( $p ) { return isset( $p['id'] ) ? $p['id'] : $p; }, $selected_products );
+			$filter_method = isset( $filters['filter_method'] ) ? $filters['filter_method'] : 'include';
+			
+			$is_in_list = in_array( $product_id, $product_ids );
+			
+			if ( $filter_method === 'include' ) {
+				return $is_in_list;
+			} else {
+				return ! $is_in_list;
 			}
 		}
 
@@ -324,7 +331,7 @@ class Calculator {
 	private static function calculate_applicable_subtotal( $rule, $cart_items ) {
 		$subtotal = 0;
 		foreach ( $cart_items as $item ) {
-			if ( empty( $rule->filters ) || self::item_matches_filters( $item, $rule->filters ) ) {
+			if ( empty( $rule->filters ) || ( isset( $rule->filters['apply_to'] ) && $rule->filters['apply_to'] === 'all_products' ) || self::item_matches_filters( $item, $rule->filters ) ) {
 				$subtotal += $item['line_total'];
 			}
 		}
@@ -341,7 +348,7 @@ class Calculator {
 	private static function calculate_applicable_quantity( $rule, $cart_items ) {
 		$quantity = 0;
 		foreach ( $cart_items as $item ) {
-			if ( empty( $rule->filters ) || self::item_matches_filters( $item, $rule->filters ) ) {
+			if ( empty( $rule->filters ) || ( isset( $rule->filters['apply_to'] ) && $rule->filters['apply_to'] === 'all_products' ) || self::item_matches_filters( $item, $rule->filters ) ) {
 				$quantity += $item['quantity'];
 			}
 		}
@@ -390,11 +397,20 @@ class Calculator {
 	private static function get_settings() {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dmwoo_settings';
+		
+		// Check if table exists
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table;
+		if ( ! $table_exists ) {
+			return array( 'apply_product_discount_to' => 'biggest_discount' );
+		}
+		
 		$results = $wpdb->get_results( "SELECT option_name, option_value FROM $table", ARRAY_A );
 		
 		$settings = array();
-		foreach ( $results as $row ) {
-			$settings[ $row['option_name'] ] = maybe_unserialize( $row['option_value'] );
+		if ( is_array( $results ) ) {
+			foreach ( $results as $row ) {
+				$settings[ $row['option_name'] ] = maybe_unserialize( $row['option_value'] );
+			}
 		}
 		
 		return $settings;
@@ -436,11 +452,13 @@ class Calculator {
 		}
 		
 		// Check product filters
-		if ( ! empty( $rule->filters ) ) {
-			$item = array( 'product_id' => $product_id );
-			if ( ! self::item_matches_filters( $item, $rule->filters ) ) {
-				return false;
-			}
+		$item = array( 'product_id' => $product_id );
+		if ( empty( $rule->filters ) || ( isset( $rule->filters['apply_to'] ) && $rule->filters['apply_to'] === 'all_products' ) ) {
+			return true;
+		}
+		
+		if ( ! self::item_matches_filters( $item, $rule->filters ) ) {
+			return false;
 		}
 		
 		return true;
@@ -451,11 +469,24 @@ class Calculator {
 	 *
 	 * @param int $product_id Product ID.
 	 * @param float $original_price Original price.
+	 * @param object $product Product object.
 	 * @param int $quantity Quantity.
 	 * @return float
 	 */
-	public static function get_product_discount_price( $product_id, $original_price, $quantity = 1 ) {
+	public static function get_product_discount_price( $product_id, $original_price, $product = null, $quantity = 1 ) {
+		if ( ! $original_price || $original_price <= 0 ) {
+			return $original_price;
+		}
+		
 		$rules = Rule::get_active_rules();
+		if ( empty( $rules ) ) {
+			return $original_price;
+		}
+		
+		if ( ! $product ) {
+			$product = wc_get_product( $product_id );
+		}
+		
 		$best_discount = 0;
 		$settings = self::get_settings();
 		
@@ -465,13 +496,61 @@ class Calculator {
 				
 				switch ( $rule->discount_type ) {
 					case 'percentage':
-						$discount = ( $original_price * $rule->discount_value ) / 100;
+						// Get base price from global settings for percentage discounts
+						$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
+						
+						if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+							// Calculate from sale price
+							$base_price = $product->get_sale_price();
+						} else {
+							// Calculate from regular price
+							$base_price = $product->get_regular_price();
+						}
+						
+						if ( ! $base_price ) {
+							$base_price = $original_price;
+						}
+						
+						// Calculate discount and apply to base price (not original price)
+						$discount_amount = ( $base_price * $rule->discount_value ) / 100;
+						$new_price = $base_price - $discount_amount;
+						$discount = $original_price - $new_price;
 						break;
 					case 'fixed':
-						$discount = $rule->discount_value;
+						// Get base price from global settings for fixed discounts
+						$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
+						
+						if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+							$base_price = $product->get_sale_price();
+						} else {
+							$base_price = $product->get_regular_price();
+						}
+						
+						if ( ! $base_price ) {
+							$base_price = $original_price;
+						}
+						
+						// Calculate new price after fixed discount
+						$new_price = max( 0, $base_price - $rule->discount_value );
+						// Return directly for fixed discounts
+						return $new_price;
 						break;
 					case 'bulk':
-						$discount = self::calculate_bulk_discount_for_product( $rule, $quantity, $original_price );
+						$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
+						
+						if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+							$base_price = $product->get_sale_price();
+						} else {
+							$base_price = $product->get_regular_price();
+						}
+						
+						if ( ! $base_price ) {
+							$base_price = $original_price;
+						}
+						
+						$discount_amount = self::calculate_bulk_discount_for_product( $rule, $quantity, $base_price );
+						$new_price = $base_price - $discount_amount;
+						$discount = $original_price - $new_price;
 						break;
 				}
 				
@@ -485,7 +564,11 @@ class Calculator {
 			}
 		}
 		
-		return max( 0, $original_price - $best_discount );
+		if ( $best_discount > 0 ) {
+			return max( 0, $original_price - $best_discount );
+		}
+		
+		return $original_price;
 	}
 
 	/**
