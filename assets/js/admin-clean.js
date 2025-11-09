@@ -521,6 +521,9 @@
                     .then(function(settings) {
                         if (settings.calculate_from) setCalculateFrom(settings.calculate_from);
                         if (settings.apply_product_discount_to) setApplyRules(settings.apply_product_discount_to);
+                        if (settings.show_sale_badge) setShowSaleBadge(settings.show_sale_badge);
+                        if (settings.show_bulk_table !== undefined) setShowBulkTable(settings.show_bulk_table);
+                        if (settings.show_strikeout !== undefined) setShowStrikeout(settings.show_strikeout);
                     })
                     .catch(function(error) {});
             }
@@ -528,7 +531,10 @@
             function handleSave() {
                 var settings = {
                     calculate_from: calculateFrom,
-                    apply_product_discount_to: applyRules
+                    apply_product_discount_to: applyRules,
+                    show_sale_badge: showSaleBadge,
+                    show_bulk_table: showBulkTable,
+                    show_strikeout: showStrikeout
                 };
                 
                 wp.apiFetch({
@@ -629,6 +635,9 @@
                             createElement('option', { value: 'when_condition_matches' }, __('Show when rule condition matches', 'discount-manager-woocommerce')),
                             createElement('option', { value: 'at_least_has_any_rules' }, __('Show on products covered by any rule', 'discount-manager-woocommerce')),
                             createElement('option', { value: 'disabled' }, __('Do not show', 'discount-manager-woocommerce'))
+                        ),
+                        createElement('p', { className: 'dmwoo-field-help' }, 
+                            __('Display "Sale!" badge on products with active discount rules.', 'discount-manager-woocommerce')
                         )
                     ),
                     createElement('div', { className: 'dmwoo-form-toggle' },

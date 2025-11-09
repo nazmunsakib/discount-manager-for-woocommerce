@@ -176,19 +176,18 @@ class Product_Display {
 	 */
 	public function modify_on_sale_status( $on_sale, $product ) {
 		$badge_setting = Settings::get( 'show_sale_badge', 'disabled' );
+		$product_id = $product->get_id();
 		
 		if ( $badge_setting === 'disabled' ) {
-			return $on_sale;
+			return false;
 		}
-		
-		$product_id = $product->get_id();
 		
 		if ( $badge_setting === 'when_condition_matches' ) {
 			return Calculator::is_product_on_sale( $product_id );
 		}
 		
 		if ( $badge_setting === 'at_least_has_any_rules' ) {
-			return Calculator::is_product_on_sale( $product_id ) || $on_sale;
+			return Calculator::is_product_on_sale( $product_id );
 		}
 		
 		return $on_sale;
@@ -204,15 +203,24 @@ class Product_Display {
 	 */
 	public function modify_sale_badge( $html, $post, $product ) {
 		$badge_setting = Settings::get( 'show_sale_badge', 'disabled' );
+		$product_id = $product->get_id();
 		
 		if ( $badge_setting === 'disabled' ) {
 			return '';
 		}
 		
-		$product_id = $product->get_id();
+		if ( $badge_setting === 'when_condition_matches' ) {
+			if ( Calculator::is_product_on_sale( $product_id ) ) {
+				return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-woocommerce' ) . '</span>';
+			}
+			return '';
+		}
 		
-		if ( Calculator::is_product_on_sale( $product_id ) ) {
-			return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-woocommerce' ) . '</span>';
+		if ( $badge_setting === 'at_least_has_any_rules' ) {
+			if ( Calculator::is_product_on_sale( $product_id ) ) {
+				return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-woocommerce' ) . '</span>';
+			}
+			return '';
 		}
 		
 		return $html;
