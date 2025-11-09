@@ -100,7 +100,7 @@ class Settings {
 	public static function get_defaults() {
 		return array(
 			// General Settings
-			'calculate_discount_from' => 'sale_price',
+			'calculate_from' => 'regular_price',
 			'apply_product_discount_to' => 'biggest_discount',
 			'apply_discount_subsequently' => false,
 			'disable_coupon_when_rule_applied' => 'run_both',
@@ -109,7 +109,7 @@ class Settings {
 			'compress_css_and_js' => false,
 			
 			// Product Settings
-			'show_on_sale_badge' => 'disabled',
+			'show_sale_badge' => 'disabled',
 			'customize_on_sale_badge' => false,
 			'force_override_on_sale_badge' => false,
 			'display_percentage_on_sale_badge' => false,
@@ -158,7 +158,7 @@ class Settings {
 			'coupon_behavior' => 'run_both',
 			'show_sale_badge' => 'disabled',
 			'show_strikeout' => true,
-			'show_savings' => 'disabled',
+			'show_savings' => 'after_total',
 			'show_cart_notifications' => false,
 			'suppress_third_party' => false,
 			'refresh_checkout' => false,

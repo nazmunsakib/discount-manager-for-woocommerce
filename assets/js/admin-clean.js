@@ -495,9 +495,7 @@
             var showStrikeout = showStrikeoutState[0];
             var setShowStrikeout = showStrikeoutState[1];
             
-            var showSavingsState = useState('disabled');
-            var showSavings = showSavingsState[0];
-            var setShowSavings = showSavingsState[1];
+
             
             var noticeState = useState(null);
             var notice = noticeState[0];
@@ -524,6 +522,7 @@
                         if (settings.show_sale_badge) setShowSaleBadge(settings.show_sale_badge);
                         if (settings.show_bulk_table !== undefined) setShowBulkTable(settings.show_bulk_table);
                         if (settings.show_strikeout !== undefined) setShowStrikeout(settings.show_strikeout);
+
                     })
                     .catch(function(error) {});
             }
@@ -534,7 +533,8 @@
                     apply_product_discount_to: applyRules,
                     show_sale_badge: showSaleBadge,
                     show_bulk_table: showBulkTable,
-                    show_strikeout: showStrikeout
+                    show_strikeout: showStrikeout,
+
                 };
                 
                 wp.apiFetch({
@@ -680,18 +680,7 @@
                         createElement('span', { className: 'dashicons dashicons-megaphone' }),
                         ' ' + __('Promotion Settings', 'discount-manager-woocommerce')
                     ),
-                    createElement('div', { className: 'dmwoo-select-wrapper' },
-                        createElement('label', { className: 'dmwoo-form-label' }, __('Show "You saved" text', 'discount-manager-woocommerce')),
-                        createElement('select', {
-                            value: showSavings,
-                            onChange: function(e) { setShowSavings(e.target.value); }
-                        },
-                            createElement('option', { value: 'disabled' }, __('Disabled', 'discount-manager-woocommerce')),
-                            createElement('option', { value: 'on_each_line_item' }, __('On each line item', 'discount-manager-woocommerce')),
-                            createElement('option', { value: 'after_total' }, __('After cart total', 'discount-manager-woocommerce')),
-                            createElement('option', { value: 'both' }, __('Both line item and after total', 'discount-manager-woocommerce'))
-                        )
-                    )
+
                     )
                 ),
                 

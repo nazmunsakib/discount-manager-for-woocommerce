@@ -70,25 +70,7 @@ class Cart_Handler {
 	 * Display savings message
 	 */
 	public function display_savings_message() {
-		$discounts = WC()->session->get( 'dmwoo_applied_discounts', array() );
-		
-		if ( empty( $discounts ) ) {
-			return;
-		}
-
-		$total_savings = 0;
-		foreach ( $discounts as $discount ) {
-			$total_savings += $discount['discount_amount'];
-		}
-
-		if ( $total_savings > 0 ) {
-			echo '<div class="dmwoo-savings-message">';
-			echo '<strong>' . sprintf( 
-				__( 'You saved: %s', 'discount-manager-woocommerce' ), 
-				wc_price( $total_savings ) 
-			) . '</strong>';
-			echo '</div>';
-		}
+		// Removed - feature not implemented
 	}
 
 	/**

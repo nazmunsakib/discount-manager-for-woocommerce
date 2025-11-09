@@ -55,3 +55,21 @@
 .dmwoo-savings-message strong {
     font-size: 16px;
 }
+
+.dmwoo-you-saved {
+    background: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.dmwoo-savings-text {
+    color: #2e7d32;
+    font-size: 15px;
+}
+
+.dmwoo-savings-text strong {
+    color: #1b5e20;
+    font-size: 17px;
+}
