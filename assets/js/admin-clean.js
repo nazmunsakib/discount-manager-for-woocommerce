@@ -530,9 +530,7 @@
                     calculate_from: calculateFrom,
                     apply_product_discount_to: applyRules,
                     show_sale_badge: showSaleBadge,
-
-                    show_strikeout: showStrikeout,
-
+                    show_strikeout: showStrikeout ? 1 : 0
                 };
                 
                 wp.apiFetch({
