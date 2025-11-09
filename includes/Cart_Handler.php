@@ -27,6 +27,7 @@ class Cart_Handler {
 		add_action( 'woocommerce_review_order_before_payment', array( $this, 'display_savings_message' ) );
 		add_filter( 'woocommerce_cart_item_price', array( $this, 'modify_cart_item_price' ), 10, 3 );
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'increment_rule_usage' ), 10, 1 );
+		add_filter( 'woocommerce_coupons_enabled', array( $this, 'maybe_disable_coupons' ), 10, 1 );
 	}
 
 	/**
@@ -38,6 +39,15 @@ class Cart_Handler {
 		}
 
 		if ( did_action( 'woocommerce_before_calculate_totals' ) >= 2 ) {
+			return;
+		}
+
+		// Check coupon behavior setting
+		$coupon_behavior = Settings::get( 'coupon_behavior', 'run_both' );
+		$has_coupons = ! empty( $cart->get_applied_coupons() );
+		
+		// If disable_rules when coupons applied, skip discount rules
+		if ( $coupon_behavior === 'disable_rules' && $has_coupons ) {
 			return;
 		}
 
@@ -64,6 +74,7 @@ class Cart_Handler {
 		
 		// Store applied rules for usage tracking on order completion
 		WC()->session->set( 'dmwoo_applied_rule_ids', array_unique( $applied_rules ) );
+		WC()->session->set( 'dmwoo_has_discount_rules', ! empty( $applied_rules ) );
 	}
 
 	/**
@@ -107,5 +118,29 @@ class Cart_Handler {
 		
 		// Clear session
 		WC()->session->set( 'dmwoo_applied_rule_ids', array() );
+		WC()->session->set( 'dmwoo_has_discount_rules', false );
+	}
+
+	/**
+	 * Maybe disable coupons based on coupon behavior setting
+	 *
+	 * @param bool $enabled Whether coupons are enabled.
+	 * @return bool
+	 */
+	public function maybe_disable_coupons( $enabled ) {
+		if ( ! WC()->session ) {
+			return $enabled;
+		}
+		
+		$coupon_behavior = Settings::get( 'coupon_behavior', 'run_both' );
+		
+		if ( $coupon_behavior === 'disable_coupon' ) {
+			$has_discount_rules = WC()->session->get( 'dmwoo_has_discount_rules', false );
+			if ( $has_discount_rules ) {
+				return false;
+			}
+		}
+		
+		return $enabled;
 	}
 }

@@ -517,6 +517,7 @@
                     .then(function(settings) {
                         if (settings.calculate_from) setCalculateFrom(settings.calculate_from);
                         if (settings.apply_product_discount_to) setApplyRules(settings.apply_product_discount_to);
+                        if (settings.coupon_behavior) setCouponBehavior(settings.coupon_behavior);
                         if (settings.show_sale_badge) setShowSaleBadge(settings.show_sale_badge);
                         if (settings.show_strikeout !== undefined) {
                             setShowStrikeout(settings.show_strikeout == 1 || settings.show_strikeout === true);
@@ -529,6 +530,7 @@
                 var settings = {
                     calculate_from: calculateFrom,
                     apply_product_discount_to: applyRules,
+                    coupon_behavior: couponBehavior,
                     show_sale_badge: showSaleBadge,
                     show_strikeout: showStrikeout ? 1 : 0
                 };
