@@ -499,6 +499,10 @@
             var notice = noticeState[0];
             var setNotice = noticeState[1];
             
+            var resetModalState = useState(false);
+            var resetModal = resetModalState[0];
+            var setResetModal = resetModalState[1];
+            
             useEffect(function() {
                 loadSettings();
             }, []);
@@ -548,6 +552,26 @@
                 });
             }
             
+            function handleReset() {
+                setResetModal(true);
+            }
+            
+            function confirmReset() {
+                setResetModal(false);
+                
+                wp.apiFetch({
+                    path: '/dmwoo/v1/settings/reset',
+                    method: 'POST'
+                })
+                .then(function() {
+                    setNotice({ type: 'success', message: __('Settings reset successfully!', 'discount-manager-woocommerce') });
+                    loadSettings();
+                })
+                .catch(function(error) {
+                    setNotice({ type: 'error', message: __('Failed to reset settings', 'discount-manager-woocommerce') });
+                });
+            }
+            
             return createElement('div', { className: 'dmwoo-settings-container' },
                 notice && createElement('div', { className: 'dmwoo-toast dmwoo-toast-' + notice.type },
                     createElement('span', { className: 'dmwoo-toast-message' }, notice.message),
@@ -555,6 +579,24 @@
                         className: 'dmwoo-toast-close',
                         onClick: function() { setNotice(null); }
                     }, '×')
+                ),
+                resetModal && createElement(Modal, {
+                    title: __('Reset Settings', 'discount-manager-woocommerce'),
+                    onRequestClose: function() { setResetModal(false); },
+                    className: 'dmwoo-delete-modal'
+                },
+                    createElement('p', null, __('Are you sure you want to reset all settings to defaults? This action cannot be undone.', 'discount-manager-woocommerce')),
+                    createElement('div', { className: 'dmwoo-modal-actions' },
+                        createElement(Button, {
+                            variant: 'secondary',
+                            onClick: function() { setResetModal(false); }
+                        }, __('Cancel', 'discount-manager-woocommerce')),
+                        createElement(Button, {
+                            variant: 'primary',
+                            isDestructive: true,
+                            onClick: confirmReset
+                        }, __('Reset', 'discount-manager-woocommerce'))
+                    )
                 ),
                 
                 createElement('div', { className: 'dmwoo-settings-grid' },
@@ -671,7 +713,13 @@
                     createElement(Button, {
                         variant: 'primary',
                         onClick: handleSave
-                    }, __('Save Settings', 'discount-manager-woocommerce'))
+                    }, __('Save Settings', 'discount-manager-woocommerce')),
+                    createElement(Button, {
+                        variant: 'secondary',
+                        isDestructive: true,
+                        onClick: handleReset,
+                        style: { marginLeft: '10px' }
+                    }, __('Reset to Defaults', 'discount-manager-woocommerce'))
                 )
             );
         }

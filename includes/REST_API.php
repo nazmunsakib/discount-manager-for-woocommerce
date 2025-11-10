@@ -97,6 +97,12 @@ class REST_API {
 				'permission_callback' => array( $this, 'check_permissions' ),
 			),
 		) );
+
+		register_rest_route( 'dmwoo/v1', '/settings/reset', array(
+			'methods' => 'POST',
+			'callback' => array( $this, 'reset_settings' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+		) );
 	}
 
 	/**
@@ -366,5 +372,21 @@ class REST_API {
 		}
 		
 		return rest_ensure_response( array( 'message' => 'Settings saved successfully' ) );
+	}
+
+	/**
+	 * Reset settings to defaults
+	 */
+	public function reset_settings( $request ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dmwoo_settings';
+		
+		// Clear all settings
+		$wpdb->query( "TRUNCATE TABLE $table" );
+		
+		// Reinitialize defaults
+		Settings::init_defaults();
+		
+		return rest_ensure_response( array( 'message' => 'Settings reset to defaults successfully' ) );
 	}
 }
