@@ -6,6 +6,43 @@
     font-family: "Nunito", sans-serif;
 }
 
+/* Page Header with Gradient */
+.dmwoo-page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px 40px;
+    margin: 0 0 30px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.dmwoo-page-header h1 {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dmwoo-header-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-left: auto;
+    backdrop-filter: blur(10px);
+}
+
+.dmwoo-header-icon {
+    width: 40px;
+    height: 40px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
 /* Modern Tab Navigation */
 .dmwoo-app {
     margin-top: 20px;

@@ -34,7 +34,7 @@ class Enqueue {
 	 */
 	public function admin_scripts( $hook ) {
 		// Admin app for discount manager page
-		if ( 'toplevel_page_discount-manager' === $hook ) {
+		if ( 'woocommerce_page_discount-manager' === $hook ) {
 			// Enqueue Google Fonts
 			wp_enqueue_style(
 				'dmwoo-google-fonts',

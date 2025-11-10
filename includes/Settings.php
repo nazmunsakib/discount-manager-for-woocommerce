@@ -102,6 +102,7 @@ class Settings {
 			'calculate_from' => 'regular_price',
 			'apply_product_discount_to' => 'first',
 			'coupon_behavior' => 'run_both',
+			'suppress_third_party' => false,
 			'show_sale_badge' => 'when_condition_matches',
 			'show_strikeout' => 1,
 		);

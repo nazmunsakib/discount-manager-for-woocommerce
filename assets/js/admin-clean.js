@@ -489,7 +489,9 @@
             var showStrikeout = showStrikeoutState[0];
             var setShowStrikeout = showStrikeoutState[1];
             
-
+            var suppressThirdPartyState = useState(false);
+            var suppressThirdParty = suppressThirdPartyState[0];
+            var setSuppressThirdParty = suppressThirdPartyState[1];
             
             var noticeState = useState(null);
             var notice = noticeState[0];
@@ -522,6 +524,9 @@
                         if (settings.show_strikeout !== undefined) {
                             setShowStrikeout(settings.show_strikeout == 1 || settings.show_strikeout === true);
                         }
+                        if (settings.suppress_third_party !== undefined) {
+                            setSuppressThirdParty(settings.suppress_third_party == 1 || settings.suppress_third_party === true);
+                        }
                     })
                     .catch(function(error) {});
             }
@@ -532,7 +537,8 @@
                     apply_product_discount_to: applyRules,
                     coupon_behavior: couponBehavior,
                     show_sale_badge: showSaleBadge,
-                    show_strikeout: showStrikeout ? 1 : 0
+                    show_strikeout: showStrikeout ? 1 : 0,
+                    suppress_third_party: suppressThirdParty ? 1 : 0
                 };
                 
                 wp.apiFetch({
@@ -637,6 +643,25 @@
                             createElement('option', { value: 'disable_coupon' }, __('Disable coupons when discount rules apply', 'discount-manager-woocommerce')),
                             createElement('option', { value: 'disable_rules' }, __('Disable discount rules when coupons apply', 'discount-manager-woocommerce'))
                         )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-toggle' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Suppress third party discount plugins', 'discount-manager-woocommerce')),
+                        createElement('div', { className: 'dmwoo-toggle-container' },
+                            createElement('label', { className: 'dmwoo-toggle-switch' },
+                                createElement('input', {
+                                    type: 'checkbox',
+                                    checked: suppressThirdParty,
+                                    onChange: function(e) { setSuppressThirdParty(e.target.checked); }
+                                }),
+                                createElement('span', { className: 'dmwoo-toggle-slider' }),
+                                createElement('span', { className: 'dmwoo-toggle-label' }, 
+                                    suppressThirdParty ? __('Enabled', 'discount-manager-woocommerce') : __('Disabled', 'discount-manager-woocommerce')
+                                )
+                            )
+                        ),
+                        createElement('p', { className: 'dmwoo-field-help' }, 
+                            __('Prevent other discount plugins from applying discounts when this plugin is active.', 'discount-manager-woocommerce')
+                        )
                     )
                     ),
                     
@@ -677,15 +702,6 @@
                             )
                         )
                     )
-                    ),
-                    
-                    // Promotion Settings
-                    createElement('div', { className: 'dmwoo-form-section' },
-                    createElement('h3', null, 
-                        createElement('span', { className: 'dashicons dashicons-megaphone' }),
-                        ' ' + __('Promotion Settings', 'discount-manager-woocommerce')
-                    ),
-
                     )
                 ),
                 
