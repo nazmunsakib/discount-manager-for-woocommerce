@@ -197,7 +197,7 @@ class Calculator {
 	 * @param array $filters Rule filters.
 	 * @return bool
 	 */
-	private static function item_matches_filters( $item, $filters ) {
+	public static function item_matches_filters( $item, $filters ) {
 		$product_id = $item['product_id'];
 		
 		// If apply_to is all_products, match all

@@ -24,6 +24,7 @@ class Cart_Handler {
 	 */
 	public function __construct() {
 		add_action( 'woocommerce_before_calculate_totals', array( $this, 'apply_cart_discounts' ), 10, 1 );
+		add_action( 'woocommerce_cart_calculate_fees', array( $this, 'apply_cart_adjustments' ), 10, 1 );
 		add_action( 'woocommerce_review_order_before_payment', array( $this, 'display_savings_message' ) );
 		add_filter( 'woocommerce_cart_item_price', array( $this, 'modify_cart_item_price' ), 10, 3 );
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'increment_rule_usage' ), 10, 1 );
@@ -68,6 +69,20 @@ class Cart_Handler {
 				$base_price = $product->get_regular_price();
 			}
 			
+			// Skip product price adjustment if rule is cart adjustment type
+			$rules = Rule::get_active_rules();
+			$is_cart_adjustment = false;
+			foreach ( $rules as $rule ) {
+				if ( $rule->apply_as_cart_rule == 1 && Calculator::item_matches_filters( $cart_item, $rule->filters ) ) {
+					$is_cart_adjustment = true;
+					break;
+				}
+			}
+			
+			if ( $is_cart_adjustment ) {
+				continue;
+			}
+			
 			$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product, $quantity, $applied_rules, $cart_items );
 			
 			if ( $discount_price < $base_price ) {
@@ -78,6 +93,61 @@ class Cart_Handler {
 		// Store applied rules for usage tracking on order completion
 		WC()->session->set( 'dmwoo_applied_rule_ids', array_unique( $applied_rules ) );
 		WC()->session->set( 'dmwoo_has_discount_rules', ! empty( $applied_rules ) );
+	}
+
+	/**
+	 * Apply cart adjustments as fees
+	 */
+	public function apply_cart_adjustments( $cart ) {
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return;
+		}
+		
+		$rules = Rule::get_active_rules();
+		$cart_items = $cart->get_cart();
+		
+		foreach ( $rules as $rule ) {
+			if ( $rule->apply_as_cart_rule != 1 ) {
+				continue;
+			}
+			
+			// Check if rule matches cart items
+			$matches = false;
+			foreach ( $cart_items as $item ) {
+				if ( Calculator::item_matches_filters( $item, $rule->filters ) ) {
+					$matches = true;
+					break;
+				}
+			}
+			
+			if ( ! $matches ) {
+				continue;
+			}
+			
+			// Calculate discount
+			$subtotal = 0;
+			foreach ( $cart_items as $item ) {
+				if ( Calculator::item_matches_filters( $item, $rule->filters ) ) {
+					$subtotal += $item['line_total'];
+				}
+			}
+			
+			if ( $subtotal <= 0 ) {
+				continue;
+			}
+			
+			$discount = 0;
+			if ( $rule->discount_type === 'percentage' ) {
+				$discount = ( $subtotal * $rule->discount_value ) / 100;
+			} else {
+				$discount = $rule->discount_value;
+			}
+			
+			if ( $discount > 0 ) {
+				$label = ! empty( $rule->cart_label ) ? $rule->cart_label : $rule->title;
+				$cart->add_fee( $label, -$discount, false );
+			}
+			}
 	}
 
 	/**
