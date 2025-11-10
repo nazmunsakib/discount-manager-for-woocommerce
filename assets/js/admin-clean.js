@@ -467,10 +467,6 @@
         
         // Settings Component
         function Settings() {
-            var enabledState = useState(true);
-            var enabled = enabledState[0];
-            var setEnabled = enabledState[1];
-            
             var calculateFromState = useState('regular_price');
             var calculateFrom = calculateFromState[0];
             var setCalculateFrom = calculateFromState[1];
@@ -605,22 +601,6 @@
                     createElement('h3', null, 
                         createElement('span', { className: 'dashicons dashicons-admin-settings' }),
                         ' ' + __('General Settings', 'discount-manager-woocommerce')
-                    ),
-                    createElement('div', { className: 'dmwoo-form-toggle' },
-                        createElement('label', { className: 'dmwoo-form-label' }, __('Enable Discount Manager', 'discount-manager-woocommerce')),
-                        createElement('div', { className: 'dmwoo-toggle-container' },
-                            createElement('label', { className: 'dmwoo-toggle-switch' },
-                                createElement('input', {
-                                    type: 'checkbox',
-                                    checked: enabled,
-                                    onChange: function(e) { setEnabled(e.target.checked); }
-                                }),
-                                createElement('span', { className: 'dmwoo-toggle-slider' }),
-                                createElement('span', { className: 'dmwoo-toggle-label' }, 
-                                    enabled ? __('Enabled', 'discount-manager-woocommerce') : __('Disabled', 'discount-manager-woocommerce')
-                                )
-                            )
-                        )
                     ),
                     createElement('div', { className: 'dmwoo-select-wrapper' },
                         createElement('label', { className: 'dmwoo-form-label' }, __('Calculate discount from', 'discount-manager-woocommerce')),
