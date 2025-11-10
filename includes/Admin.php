@@ -71,8 +71,8 @@ class Admin {
 				<h1><?php esc_html_e( 'Discount Manager', 'discount-manager-woocommerce' ); ?></h1>
 			</div>
 			<div id="dmwoo-admin-root">
-				<div class="dmwoo-loading">
-					<p><?php esc_html_e( 'Loading...', 'discount-manager-woocommerce' ); ?></p>
+				<div class="dmwoo-settings-loader">
+					<div class="dmwoo-spinner"></div>
 				</div>
 			</div>
 		</div>

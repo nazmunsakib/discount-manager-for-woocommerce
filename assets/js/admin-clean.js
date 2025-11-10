@@ -467,6 +467,10 @@
         
         // Settings Component
         function Settings() {
+            var loadingState = useState(true);
+            var loading = loadingState[0];
+            var setLoading = loadingState[1];
+            
             var calculateFromState = useState('regular_price');
             var calculateFrom = calculateFromState[0];
             var setCalculateFrom = calculateFromState[1];
@@ -527,8 +531,11 @@
                         if (settings.suppress_third_party !== undefined) {
                             setSuppressThirdParty(settings.suppress_third_party == 1 || settings.suppress_third_party === true);
                         }
+                        setLoading(false);
                     })
-                    .catch(function(error) {});
+                    .catch(function(error) {
+                        setLoading(false);
+                    });
             }
             
             function handleSave() {
@@ -572,6 +579,12 @@
                 .catch(function(error) {
                     setNotice({ type: 'error', message: __('Failed to reset settings', 'discount-manager-woocommerce') });
                 });
+            }
+            
+            if (loading) {
+                return createElement('div', { className: 'dmwoo-settings-loader' },
+                    createElement('div', { className: 'dmwoo-spinner' })
+                );
             }
             
             return createElement('div', { className: 'dmwoo-settings-container' },
@@ -898,8 +911,8 @@
             }
             
             if (loading) {
-                return createElement('div', { className: 'dmwoo-loading' }, 
-                    __('Loading discount rules...', 'discount-manager-woocommerce')
+                return createElement('div', { className: 'dmwoo-settings-loader' },
+                    createElement('div', { className: 'dmwoo-spinner' })
                 );
             }
             
