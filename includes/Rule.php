@@ -239,7 +239,21 @@ class Rule {
 		$this->priority = isset( $data['priority'] ) ? (int) $data['priority'] : 10;
 		$this->status = isset( $data['status'] ) ? sanitize_text_field( $data['status'] ) : 'active';
 		$this->exclusive = isset( $data['exclusive'] ) ? (bool) $data['exclusive'] : false;
-		$this->bulk_ranges = isset( $data['bulk_ranges'] ) ? (is_string( $data['bulk_ranges'] ) ? json_decode( $data['bulk_ranges'], true ) : $data['bulk_ranges']) : array();
+		// Handle bulk_ranges
+		if ( isset( $data['bulk_ranges'] ) && ! empty( $data['bulk_ranges'] ) ) {
+			if ( is_string( $data['bulk_ranges'] ) ) {
+				$this->bulk_ranges = json_decode( $data['bulk_ranges'], true );
+				if ( ! is_array( $this->bulk_ranges ) ) {
+					$this->bulk_ranges = array();
+				}
+			} elseif ( is_array( $data['bulk_ranges'] ) ) {
+				$this->bulk_ranges = $data['bulk_ranges'];
+			} else {
+				$this->bulk_ranges = array();
+			}
+		} else {
+			$this->bulk_ranges = array();
+		}
 		$this->cart_label = isset( $data['cart_label'] ) ? sanitize_text_field( $data['cart_label'] ) : '';
 		$this->apply_as_cart_rule = isset( $data['apply_as_cart_rule'] ) ? (bool) $data['apply_as_cart_rule'] : false;
 		$this->bulk_operator = isset( $data['bulk_operator'] ) ? sanitize_text_field( $data['bulk_operator'] ) : 'product_cumulative';

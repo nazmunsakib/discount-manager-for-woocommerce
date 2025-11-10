@@ -53,9 +53,12 @@ class Cart_Handler {
 
 		$applied_rules = array();
 		
-		foreach ( $cart->get_cart() as $cart_item_key => $cart_item ) {
+		$cart_items = $cart->get_cart();
+		
+		foreach ( $cart_items as $cart_item_key => $cart_item ) {
 			$product = $cart_item['data'];
 			$product_id = $product->get_id();
+			$quantity = $cart_item['quantity'];
 			
 			// Get base price based on settings
 			$calculate_from = Settings::get( 'calculate_from', 'regular_price' );
@@ -65,7 +68,7 @@ class Cart_Handler {
 				$base_price = $product->get_regular_price();
 			}
 			
-			$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product, 1, $applied_rules );
+			$discount_price = Calculator::get_product_discount_price( $product_id, $base_price, $product, $quantity, $applied_rules, $cart_items );
 			
 			if ( $discount_price < $base_price ) {
 				$product->set_price( $discount_price );

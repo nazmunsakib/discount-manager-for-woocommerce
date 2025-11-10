@@ -105,6 +105,7 @@ class Settings {
 			'suppress_third_party' => false,
 			'show_sale_badge' => 'when_condition_matches',
 			'show_strikeout' => 1,
+			'show_bulk_table' => 1,
 		);
 	}
 

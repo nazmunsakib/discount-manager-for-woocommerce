@@ -42,6 +42,9 @@ class Product_Display {
 		
 		// Discount bar
 		add_action( 'woocommerce_before_add_to_cart_form', array( $this, 'display_discount_bar' ) );
+		
+		// Bulk pricing table
+		add_action( 'woocommerce_before_add_to_cart_button', array( $this, 'display_bulk_pricing_table' ) );
 	}
 
 
@@ -181,6 +184,75 @@ class Product_Display {
 		
 		echo '<div class="dmwoo-discount-bar">';
 		echo '<span class="dmwoo-discount-text">' . esc_html__( 'Special Discount Available!', 'discount-manager-woocommerce' ) . '</span>';
+		echo '</div>';
+	}
+
+	/**
+	 * Display bulk pricing table
+	 */
+	public function display_bulk_pricing_table() {
+		global $product;
+		
+		$show_bulk_table = Settings::get( 'show_bulk_table', 1 );
+		if ( $show_bulk_table != 1 && $show_bulk_table !== true ) {
+			return;
+		}
+		
+		if ( ! $product ) {
+			return;
+		}
+		
+		$product_id = $product->get_id();
+		$bulk_data = Calculator::get_bulk_pricing_table( $product_id );
+		
+		if ( ! $bulk_data || empty( $bulk_data['ranges'] ) ) {
+			return;
+		}
+		
+		$ranges = $bulk_data['ranges'];
+		$base_price = $bulk_data['base_price'];
+		
+		echo '<div class="dmwoo-bulk-pricing-table">';
+		echo '<h4>' . esc_html__( 'Bulk Pricing', 'discount-manager-woocommerce' ) . '</h4>';
+		echo '<table>';
+		echo '<thead><tr>';
+		echo '<th>' . esc_html__( 'Quantity', 'discount-manager-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Discount', 'discount-manager-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Price', 'discount-manager-woocommerce' ) . '</th>';
+		echo '</tr></thead>';
+		echo '<tbody>';
+		
+		foreach ( $ranges as $range ) {
+			$min = isset( $range['min'] ) ? (int) $range['min'] : 0;
+			$max = isset( $range['max'] ) ? (int) $range['max'] : null;
+			$discount_type = isset( $range['discount_type'] ) ? $range['discount_type'] : 'percentage';
+			$discount_value = isset( $range['discount_value'] ) ? (float) $range['discount_value'] : 0;
+			$label = isset( $range['label'] ) && ! empty( $range['label'] ) ? $range['label'] : '';
+			
+			$qty_text = $min . ( $max ? ' - ' . $max : '+' );
+			if ( $label ) {
+				$qty_text = $label . ' (' . $qty_text . ')';
+			}
+			
+			if ( $discount_type === 'percentage' ) {
+				$discount_text = $discount_value . '% ' . esc_html__( 'off', 'discount-manager-woocommerce' );
+				$final_price = $base_price - ( ( $base_price * $discount_value ) / 100 );
+			} elseif ( $discount_type === 'fixed_price' ) {
+				$discount_text = esc_html__( 'Fixed price', 'discount-manager-woocommerce' );
+				$final_price = $discount_value;
+			} else {
+				$discount_text = wc_price( $discount_value ) . ' ' . esc_html__( 'off', 'discount-manager-woocommerce' );
+				$final_price = $base_price - $discount_value;
+			}
+			
+			echo '<tr>';
+			echo '<td>' . esc_html( $qty_text ) . '</td>';
+			echo '<td>' . wp_kses_post( $discount_text ) . '</td>';
+			echo '<td>' . wp_kses_post( wc_price( max( 0, $final_price ) ) ) . '</td>';
+			echo '</tr>';
+		}
+		
+		echo '</tbody></table>';
 		echo '</div>';
 	}
 

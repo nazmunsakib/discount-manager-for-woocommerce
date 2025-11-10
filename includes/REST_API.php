@@ -164,6 +164,10 @@ class REST_API {
 		$rule->filters = $params['filters'] ?? array();
 		$rule->customer_conditions = $params['customer_conditions'] ?? array();
 		$rule->status = sanitize_text_field( $params['status'] ?? 'active' );
+		$rule->bulk_ranges = $params['bulk_ranges'] ?? '';
+		$rule->bulk_operator = sanitize_text_field( $params['bulk_operator'] ?? 'product_individual' );
+		$rule->apply_as_cart_rule = intval( $params['apply_as_cart_rule'] ?? 0 );
+		$rule->cart_label = sanitize_text_field( $params['cart_label'] ?? '' );
 		
 		$rule_id = $rule->save();
 		
@@ -187,16 +191,20 @@ class REST_API {
 			
 			$params = $request->get_json_params();
 			
-			$rule->title = sanitize_text_field( $params['title'] );
-			$rule->description = sanitize_textarea_field( $params['description'] ?? '' );
-			$rule->discount_type = sanitize_text_field( $params['discount_type'] );
-			$rule->discount_value = floatval( $params['discount_value'] );
-			$rule->conditions = $params['conditions'] ?? array();
-			$rule->filters = $params['filters'] ?? array();
-			$rule->customer_conditions = $params['customer_conditions'] ?? array();
-			$rule->usage_limit = isset( $params['usage_limit'] ) && $params['usage_limit'] ? intval( $params['usage_limit'] ) : null;
-			$rule->priority = intval( $params['priority'] ?? 10 );
-			$rule->status = sanitize_text_field( $params['status'] ?? 'active' );
+			if ( isset( $params['title'] ) ) $rule->title = sanitize_text_field( $params['title'] );
+			if ( isset( $params['description'] ) ) $rule->description = sanitize_textarea_field( $params['description'] );
+			if ( isset( $params['discount_type'] ) ) $rule->discount_type = sanitize_text_field( $params['discount_type'] );
+			if ( isset( $params['discount_value'] ) ) $rule->discount_value = floatval( $params['discount_value'] );
+			if ( isset( $params['conditions'] ) ) $rule->conditions = $params['conditions'];
+			if ( isset( $params['filters'] ) ) $rule->filters = $params['filters'];
+			if ( isset( $params['customer_conditions'] ) ) $rule->customer_conditions = $params['customer_conditions'];
+			if ( isset( $params['usage_limit'] ) ) $rule->usage_limit = $params['usage_limit'] ? intval( $params['usage_limit'] ) : null;
+			if ( isset( $params['priority'] ) ) $rule->priority = intval( $params['priority'] );
+			if ( isset( $params['status'] ) ) $rule->status = sanitize_text_field( $params['status'] );
+			if ( isset( $params['bulk_ranges'] ) ) $rule->bulk_ranges = $params['bulk_ranges'];
+			if ( isset( $params['bulk_operator'] ) ) $rule->bulk_operator = sanitize_text_field( $params['bulk_operator'] );
+			if ( isset( $params['apply_as_cart_rule'] ) ) $rule->apply_as_cart_rule = intval( $params['apply_as_cart_rule'] );
+			if ( isset( $params['cart_label'] ) ) $rule->cart_label = sanitize_text_field( $params['cart_label'] );
 			
 			if ( $rule->save() ) {
 				return rest_ensure_response( array( 'message' => 'Rule updated successfully' ) );

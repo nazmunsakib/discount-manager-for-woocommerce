@@ -68,13 +68,40 @@
                                             )
                                         )
                                     ),
-                                    createElement('p', null, 
-                                        rule.discount_type === 'percentage' ? 
-                                            rule.discount_value + '% discount' :
-                                        rule.discount_type === 'fixed' ?
-                                            rule.discount_value + ' fixed discount' :
-                                            'Bulk discount (' + (rule.conditions && rule.conditions.bulk_ranges ? rule.conditions.bulk_ranges.length : 0) + ' ranges)'
-                                    ),
+                                    (function() {
+                                        if (rule.apply_as_cart_rule == 1) {
+                                            return createElement('p', null, 'Cart Adjustment: ' + (rule.discount_type === 'percentage' ? rule.discount_value + '%' : rule.discount_value + ' fixed'));
+                                        }
+                                        
+                                        var parsedRanges = null;
+                                        if (rule.bulk_ranges) {
+                                            try {
+                                                parsedRanges = typeof rule.bulk_ranges === 'string' ? JSON.parse(rule.bulk_ranges) : rule.bulk_ranges;
+                                                if (parsedRanges && !Array.isArray(parsedRanges)) {
+                                                    parsedRanges = null;
+                                                }
+                                            } catch(e) {
+                                                parsedRanges = null;
+                                            }
+                                        }
+                                        
+                                        if (parsedRanges && Array.isArray(parsedRanges) && parsedRanges.length > 0) {
+                                            var operatorText = rule.bulk_operator === 'product_cumulative' ? ' (Cumulative)' : ' (Individual)';
+                                            return createElement('div', null,
+                                                createElement('p', { style: { fontWeight: '600', marginBottom: '8px' } }, 'Bulk Discount' + operatorText),
+                                                parsedRanges.map(function(range, idx) {
+                                                    var discountText = range.discount_type === 'percentage' ? range.discount_value + '% off' : 
+                                                                      range.discount_type === 'fixed_price' ? 'Price: ' + range.discount_value : 
+                                                                      range.discount_value + ' off';
+                                                    return createElement('p', { key: idx, style: { fontSize: '12px', margin: '4px 0', color: '#646970' } },
+                                                        'Qty ' + range.min + (range.max ? '-' + range.max : '+') + ': ' + discountText
+                                                    );
+                                                })
+                                            );
+                                        }
+                                        
+                                        return createElement('p', null, 'Product Adjustment: ' + (rule.discount_type === 'percentage' ? rule.discount_value + '%' : rule.discount_value + ' fixed'));
+                                    })(),
                                     rule.description && createElement('p', { className: 'dmwoo-description' }, rule.description),
                                     createElement('div', { className: 'dmwoo-rule-actions' },
                                         createElement(Button, {
@@ -115,6 +142,22 @@
             var description = descriptionState[0];
             var setDescription = descriptionState[1];
             
+            var parsedBulkRanges = null;
+            if (rule && rule.bulk_ranges) {
+                try {
+                    parsedBulkRanges = typeof rule.bulk_ranges === 'string' ? JSON.parse(rule.bulk_ranges) : rule.bulk_ranges;
+                    if (!Array.isArray(parsedBulkRanges) || parsedBulkRanges.length === 0) {
+                        parsedBulkRanges = null;
+                    }
+                } catch(e) {
+                    parsedBulkRanges = null;
+                }
+            }
+            
+            var ruleTypeState = useState(rule ? (rule.apply_as_cart_rule == 1 ? 'cart_adjustment' : (parsedBulkRanges ? 'bulk_discount' : 'product_adjustment')) : 'product_adjustment');
+            var ruleType = ruleTypeState[0];
+            var setRuleType = ruleTypeState[1];
+            
             var discountTypeState = useState(rule ? rule.discount_type : 'percentage');
             var discountType = discountTypeState[0];
             var setDiscountType = discountTypeState[1];
@@ -122,6 +165,18 @@
             var discountValueState = useState(rule ? rule.discount_value : 10);
             var discountValue = discountValueState[0];
             var setDiscountValue = discountValueState[1];
+            
+            var bulkRangesState = useState(parsedBulkRanges && parsedBulkRanges.length > 0 ? parsedBulkRanges : [{min: 1, max: null, discount_type: 'percentage', discount_value: 10, label: ''}]);
+            var bulkRanges = bulkRangesState[0];
+            var setBulkRanges = bulkRangesState[1];
+            
+            var bulkOperatorState = useState(rule && rule.bulk_operator ? rule.bulk_operator : 'product_individual');
+            var bulkOperator = bulkOperatorState[0];
+            var setBulkOperator = bulkOperatorState[1];
+            
+            var cartLabelState = useState(rule && rule.cart_label ? rule.cart_label : '');
+            var cartLabel = cartLabelState[0];
+            var setCartLabel = cartLabelState[1];
             
             var parsedConditions = null;
             if (rule && rule.conditions) {
@@ -208,8 +263,12 @@
                 var data = {
                     title: title.trim(),
                     description: description ? description.trim() : '',
-                    discount_type: discountType,
-                    discount_value: discountValue,
+                    discount_type: ruleType === 'bulk_discount' ? (bulkRanges[0] ? bulkRanges[0].discount_type : 'percentage') : discountType,
+                    discount_value: ruleType === 'bulk_discount' ? 0 : discountValue,
+                    apply_as_cart_rule: ruleType === 'cart_adjustment' ? 1 : 0,
+                    bulk_ranges: ruleType === 'bulk_discount' ? bulkRanges : [],
+                    bulk_operator: ruleType === 'bulk_discount' ? bulkOperator : 'product_individual',
+                    cart_label: ruleType === 'cart_adjustment' ? cartLabel : null,
                     filters: {
                         apply_to: applyTo,
                         filter_method: applyTo === 'specific_products' ? filterMethod : 'include',
@@ -275,40 +334,197 @@
                 createElement('div', { className: 'dmwoo-form-section' },
                     createElement('h3', null, __('Discount Configuration', 'discount-manager-woocommerce')),
                     createElement('div', { className: 'dmwoo-form-field' },
-                        createElement('label', { className: 'dmwoo-form-label' }, __('Discount Type', 'discount-manager-woocommerce')),
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Rule Type', 'discount-manager-woocommerce')),
                         createElement('select', {
-                            value: discountType,
-                            onChange: function(e) { setDiscountType(e.target.value); }
+                            value: ruleType,
+                            onChange: function(e) { setRuleType(e.target.value); }
                         },
-                            createElement('option', { value: 'percentage' }, __('Percentage Discount', 'discount-manager-woocommerce')),
-                            createElement('option', { value: 'fixed' }, __('Fixed Discount', 'discount-manager-woocommerce'))
+                            createElement('option', { value: 'product_adjustment' }, __('Product Adjustment', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'bulk_discount' }, __('Bulk Discount', 'discount-manager-woocommerce')),
+                            createElement('option', { value: 'cart_adjustment' }, __('Cart Adjustment', 'discount-manager-woocommerce'))
                         )
                     ),
                     
-                    discountType === 'percentage' && createElement('div', { className: 'dmwoo-form-field' },
-                        createElement('label', { className: 'dmwoo-form-label' }, __('Discount Percentage', 'discount-manager-woocommerce')),
-                        createElement('input', {
-                            type: 'number',
-                            value: discountValue,
-                            onChange: function(e) { setDiscountValue(parseFloat(e.target.value) || 0); },
-                            min: 0,
-                            max: 100,
-                            step: 0.01
-                        })
+                    ruleType === 'product_adjustment' && createElement('div', null,
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Discount Type', 'discount-manager-woocommerce')),
+                            createElement('select', {
+                                value: discountType,
+                                onChange: function(e) { setDiscountType(e.target.value); }
+                            },
+                                createElement('option', { value: 'percentage' }, __('Percentage', 'discount-manager-woocommerce')),
+                                createElement('option', { value: 'fixed' }, __('Fixed Amount', 'discount-manager-woocommerce'))
+                            )
+                        ),
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, discountType === 'percentage' ? __('Discount Percentage', 'discount-manager-woocommerce') : __('Fixed Discount Amount', 'discount-manager-woocommerce')),
+                            createElement('input', {
+                                type: 'number',
+                                value: discountValue,
+                                onChange: function(e) { setDiscountValue(parseFloat(e.target.value) || 0); },
+                                min: 0,
+                                max: discountType === 'percentage' ? 100 : undefined,
+                                step: 0.01
+                            })
+                        )
                     ),
                     
-                    discountType === 'fixed' && createElement('div', { className: 'dmwoo-form-field' },
-                        createElement('label', { className: 'dmwoo-form-label' }, __('Fixed Discount Amount', 'discount-manager-woocommerce')),
-                        createElement('input', {
-                            type: 'number',
-                            value: discountValue,
-                            onChange: function(e) { setDiscountValue(parseFloat(e.target.value) || 0); },
-                            min: 0,
-                            step: 0.01
-                        })
+                    ruleType === 'cart_adjustment' && createElement('div', null,
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Discount Type', 'discount-manager-woocommerce')),
+                            createElement('select', {
+                                value: discountType,
+                                onChange: function(e) { setDiscountType(e.target.value); }
+                            },
+                                createElement('option', { value: 'percentage' }, __('Percentage', 'discount-manager-woocommerce')),
+                                createElement('option', { value: 'fixed' }, __('Fixed Amount', 'discount-manager-woocommerce'))
+                            )
+                        ),
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, discountType === 'percentage' ? __('Discount Percentage', 'discount-manager-woocommerce') : __('Fixed Discount Amount', 'discount-manager-woocommerce')),
+                            createElement('input', {
+                                type: 'number',
+                                value: discountValue,
+                                onChange: function(e) { setDiscountValue(parseFloat(e.target.value) || 0); },
+                                min: 0,
+                                max: discountType === 'percentage' ? 100 : undefined,
+                                step: 0.01
+                            })
+                        ),
+                        createElement('div', { className: 'dmwoo-form-field' },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Cart Label (Optional)', 'discount-manager-woocommerce')),
+                            createElement('input', {
+                                type: 'text',
+                                value: cartLabel,
+                                onChange: function(e) { setCartLabel(e.target.value); },
+                                placeholder: __('e.g., Special Discount', 'discount-manager-woocommerce')
+                            }),
+                            createElement('p', { className: 'dmwoo-field-help' }, 
+                                __('Label shown in cart for this discount', 'discount-manager-woocommerce')
+                            )
+                        )
                     ),
                     
-
+                    ruleType === 'bulk_discount' && createElement('div', { className: 'dmwoo-bulk-ranges' },
+                        createElement('div', { className: 'dmwoo-form-field', style: { marginBottom: '15px' } },
+                            createElement('label', { className: 'dmwoo-form-label' }, __('Bulk Operator', 'discount-manager-woocommerce')),
+                            createElement('select', {
+                                value: bulkOperator,
+                                onChange: function(e) { setBulkOperator(e.target.value); }
+                            },
+                                createElement('option', { value: 'product_individual' }, __('Individual Product (each product quantity counted separately)', 'discount-manager-woocommerce')),
+                                createElement('option', { value: 'product_cumulative' }, __('Cumulative (total quantity of matching products)', 'discount-manager-woocommerce'))
+                            ),
+                            createElement('p', { className: 'dmwoo-field-help' }, 
+                                __('Individual: Each product\'s quantity determines its discount. Cumulative: Total quantity of all matching products determines discount.', 'discount-manager-woocommerce')
+                            )
+                        ),
+                        createElement('p', { className: 'dmwoo-field-help', style: { marginBottom: '15px', marginTop: '0' } }, 
+                            __('Define quantity ranges and their discounts. Example: Buy 2-5 get 10% off, Buy 6+ get 20% off', 'discount-manager-woocommerce')
+                        ),
+                        createElement('div', { className: 'dmwoo-bulk-range-header' },
+                            createElement('div', null, __('Label', 'discount-manager-woocommerce')),
+                            createElement('div', null, __('Min Qty', 'discount-manager-woocommerce')),
+                            createElement('div', null, __('Max Qty', 'discount-manager-woocommerce')),
+                            createElement('div', null, __('Type', 'discount-manager-woocommerce')),
+                            createElement('div', null, __('Value', 'discount-manager-woocommerce')),
+                            createElement('div', null)
+                        ),
+                        bulkRanges.map(function(range, index) {
+                            return createElement('div', { key: index, className: 'dmwoo-bulk-range-row' },
+                                createElement('div', { className: 'dmwoo-bulk-range-fields' },
+                                    createElement('div', { className: 'dmwoo-form-field' },
+                                        createElement('label', null, __('Label', 'discount-manager-woocommerce')),
+                                        createElement('input', {
+                                            type: 'text',
+                                            value: range.label || '',
+                                            onChange: function(e) {
+                                                var newRanges = bulkRanges.slice();
+                                                newRanges[index].label = e.target.value;
+                                                setBulkRanges(newRanges);
+                                            },
+                                            placeholder: __('e.g., Starter Pack', 'discount-manager-woocommerce')
+                                        })
+                                    ),
+                                    createElement('div', { className: 'dmwoo-form-field' },
+                                        createElement('label', null, __('Min Qty', 'discount-manager-woocommerce')),
+                                        createElement('input', {
+                                            type: 'number',
+                                            value: range.min,
+                                            onChange: function(e) {
+                                                var newRanges = bulkRanges.slice();
+                                                newRanges[index].min = parseInt(e.target.value) || 1;
+                                                setBulkRanges(newRanges);
+                                            },
+                                            min: 1
+                                        })
+                                    ),
+                                    createElement('div', { className: 'dmwoo-form-field' },
+                                        createElement('label', null, __('Max Qty', 'discount-manager-woocommerce')),
+                                        createElement('input', {
+                                            type: 'number',
+                                            value: range.max || '',
+                                            onChange: function(e) {
+                                                var newRanges = bulkRanges.slice();
+                                                newRanges[index].max = e.target.value ? parseInt(e.target.value) : null;
+                                                setBulkRanges(newRanges);
+                                            },
+                                            placeholder: __('Unlimited', 'discount-manager-woocommerce'),
+                                            min: range.min
+                                        })
+                                    ),
+                                    createElement('div', { className: 'dmwoo-form-field' },
+                                        createElement('label', null, __('Type', 'discount-manager-woocommerce')),
+                                        createElement('select', {
+                                            value: range.discount_type,
+                                            onChange: function(e) {
+                                                var newRanges = bulkRanges.slice();
+                                                newRanges[index].discount_type = e.target.value;
+                                                setBulkRanges(newRanges);
+                                            }
+                                        },
+                                            createElement('option', { value: 'percentage' }, '%'),
+                                            createElement('option', { value: 'fixed' }, __('Fixed', 'discount-manager-woocommerce')),
+                                            createElement('option', { value: 'fixed_price' }, __('Price', 'discount-manager-woocommerce'))
+                                        )
+                                    ),
+                                    createElement('div', { className: 'dmwoo-form-field' },
+                                        createElement('label', null, __('Value', 'discount-manager-woocommerce')),
+                                        createElement('input', {
+                                            type: 'number',
+                                            value: range.discount_value,
+                                            onChange: function(e) {
+                                                var newRanges = bulkRanges.slice();
+                                                newRanges[index].discount_value = parseFloat(e.target.value) || 0;
+                                                setBulkRanges(newRanges);
+                                            },
+                                            min: 0,
+                                            step: 0.01
+                                        })
+                                    ),
+                                    createElement('button', {
+                                        type: 'button',
+                                        className: 'dmwoo-remove-range',
+                                        onClick: function() {
+                                            if (bulkRanges.length > 1) {
+                                                var newRanges = bulkRanges.filter(function(r, i) { return i !== index; });
+                                                setBulkRanges(newRanges);
+                                            }
+                                        },
+                                        disabled: bulkRanges.length === 1
+                                    }, '×')
+                                )
+                            );
+                        }),
+                        createElement(Button, {
+                            variant: 'secondary',
+                            size: 'small',
+                            onClick: function() {
+                                setBulkRanges(bulkRanges.concat([{min: 1, max: null, discount_type: 'percentage', discount_value: 10, label: ''}]));
+                            },
+                            style: { marginTop: '10px' }
+                        }, __('Add Range', 'discount-manager-woocommerce'))
+                    )
                 ),
                 
                 // Filter Section
@@ -493,6 +709,10 @@
             var showStrikeout = showStrikeoutState[0];
             var setShowStrikeout = showStrikeoutState[1];
             
+            var showBulkTableState = useState(true);
+            var showBulkTable = showBulkTableState[0];
+            var setShowBulkTable = showBulkTableState[1];
+            
             var suppressThirdPartyState = useState(false);
             var suppressThirdParty = suppressThirdPartyState[0];
             var setSuppressThirdParty = suppressThirdPartyState[1];
@@ -528,6 +748,9 @@
                         if (settings.show_strikeout !== undefined) {
                             setShowStrikeout(settings.show_strikeout == 1 || settings.show_strikeout === true);
                         }
+                        if (settings.show_bulk_table !== undefined) {
+                            setShowBulkTable(settings.show_bulk_table == 1 || settings.show_bulk_table === true);
+                        }
                         if (settings.suppress_third_party !== undefined) {
                             setSuppressThirdParty(settings.suppress_third_party == 1 || settings.suppress_third_party === true);
                         }
@@ -545,6 +768,7 @@
                     coupon_behavior: couponBehavior,
                     show_sale_badge: showSaleBadge,
                     show_strikeout: showStrikeout ? 1 : 0,
+                    show_bulk_table: showBulkTable ? 1 : 0,
                     suppress_third_party: suppressThirdParty ? 1 : 0
                 };
                 
@@ -714,6 +938,25 @@
                                 )
                             )
                         )
+                    ),
+                    createElement('div', { className: 'dmwoo-form-toggle' },
+                        createElement('label', { className: 'dmwoo-form-label' }, __('Show bulk pricing table', 'discount-manager-woocommerce')),
+                        createElement('div', { className: 'dmwoo-toggle-container' },
+                            createElement('label', { className: 'dmwoo-toggle-switch' },
+                                createElement('input', {
+                                    type: 'checkbox',
+                                    checked: showBulkTable,
+                                    onChange: function(e) { setShowBulkTable(e.target.checked); }
+                                }),
+                                createElement('span', { className: 'dmwoo-toggle-slider' }),
+                                createElement('span', { className: 'dmwoo-toggle-label' }, 
+                                    showBulkTable ? __('Show', 'discount-manager-woocommerce') : __('Hide', 'discount-manager-woocommerce')
+                                )
+                            )
+                        ),
+                        createElement('p', { className: 'dmwoo-field-help' }, 
+                            __('Display bulk pricing table on product pages with bulk discount rules.', 'discount-manager-woocommerce')
+                        )
                     )
                     )
                 ),
@@ -881,12 +1124,11 @@
             
             function handleToggleStatus(rule) {
                 var newStatus = rule.status === 'active' ? 'inactive' : 'active';
-                var updatedRule = Object.assign({}, rule, { status: newStatus });
                 
                 wp.apiFetch({
                     path: '/dmwoo/v1/rules/' + rule.id,
                     method: 'PUT',
-                    data: updatedRule
+                    data: { status: newStatus }
                 })
                 .then(function() {
                     loadRules();

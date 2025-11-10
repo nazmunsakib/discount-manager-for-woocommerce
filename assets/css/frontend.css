@@ -73,3 +73,50 @@
     color: #1b5e20;
     font-size: 17px;
 }
+
+/* Bulk Pricing Table */
+.dmwoo-bulk-pricing-table {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+}
+
+.dmwoo-bulk-pricing-table h4 {
+    margin: 0 0 15px 0;
+    color: #667eea;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.dmwoo-bulk-pricing-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.dmwoo-bulk-pricing-table thead th {
+    background: #667eea;
+    color: #fff;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.dmwoo-bulk-pricing-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #e1e5e9;
+    font-size: 14px;
+}
+
+.dmwoo-bulk-pricing-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dmwoo-bulk-pricing-table tbody tr:hover {
+    background: #f0f6fc;
+}

@@ -472,9 +472,10 @@ class Calculator {
 	 * @param object $product Product object.
 	 * @param int $quantity Quantity.
 	 * @param array &$applied_rules Reference to track applied rule IDs.
+	 * @param array $cart_items Cart items for cumulative calculation.
 	 * @return float
 	 */
-	public static function get_product_discount_price( $product_id, $original_price, $product = null, $quantity = 1, &$applied_rules = array() ) {
+	public static function get_product_discount_price( $product_id, $original_price, $product = null, $quantity = 1, &$applied_rules = array(), $cart_items = null ) {
 		if ( ! $original_price || $original_price <= 0 ) {
 			return $original_price;
 		}
@@ -509,18 +510,21 @@ class Calculator {
 				
 				$new_price = $base_price;
 				
-				switch ( $rule->discount_type ) {
-					case 'percentage':
-						$discount_amount = ( $base_price * $rule->discount_value ) / 100;
-						$new_price = $base_price - $discount_amount;
-						break;
-					case 'fixed':
-						$new_price = max( 0, $base_price - $rule->discount_value );
-						break;
-					case 'bulk':
-						$discount_amount = self::calculate_bulk_discount_for_product( $rule, $quantity, $base_price );
-						$new_price = $base_price - $discount_amount;
-						break;
+					// Check if this is a bulk discount rule
+				if ( isset( $rule->bulk_ranges ) && is_array( $rule->bulk_ranges ) && count( $rule->bulk_ranges ) > 0 ) {
+					$effective_qty = self::get_effective_quantity( $rule, $product_id, $quantity, $cart_items );
+					$discount_amount = self::calculate_bulk_discount_for_product( $rule, $effective_qty, $base_price );
+					$new_price = $base_price - $discount_amount;
+				} else {
+					switch ( $rule->discount_type ) {
+						case 'percentage':
+							$discount_amount = ( $base_price * $rule->discount_value ) / 100;
+							$new_price = $base_price - $discount_amount;
+							break;
+						case 'fixed':
+							$new_price = max( 0, $base_price - $rule->discount_value );
+							break;
+					}
 				}
 				
 				$discount = $base_price - $new_price;
@@ -555,6 +559,31 @@ class Calculator {
 	}
 
 	/**
+	 * Get effective quantity based on bulk operator
+	 *
+	 * @param Rule $rule Discount rule.
+	 * @param int $product_id Product ID.
+	 * @param int $quantity Current quantity.
+	 * @param array $cart_items Cart items.
+	 * @return int
+	 */
+	private static function get_effective_quantity( $rule, $product_id, $quantity, $cart_items ) {
+		$bulk_operator = isset( $rule->bulk_operator ) ? $rule->bulk_operator : 'product_individual';
+		
+		if ( $bulk_operator === 'product_cumulative' && $cart_items ) {
+			$total_qty = 0;
+			foreach ( $cart_items as $item ) {
+				if ( self::item_matches_filters( $item, $rule->filters ) ) {
+					$total_qty += isset( $item['quantity'] ) ? $item['quantity'] : 1;
+				}
+			}
+			return $total_qty;
+		}
+		
+		return $quantity;
+	}
+
+	/**
 	 * Calculate bulk discount for single product
 	 *
 	 * @param Rule $rule Discount rule.
@@ -563,14 +592,72 @@ class Calculator {
 	 * @return float
 	 */
 	private static function calculate_bulk_discount_for_product( $rule, $quantity, $price ) {
-		$bulk_ranges = $rule->conditions['bulk_ranges'] ?? array();
+		$bulk_ranges = $rule->bulk_ranges;
+		if ( is_string( $bulk_ranges ) ) {
+			$bulk_ranges = json_decode( $bulk_ranges, true );
+		}
+		
+		if ( empty( $bulk_ranges ) || ! is_array( $bulk_ranges ) ) {
+			return 0;
+		}
 		
 		foreach ( $bulk_ranges as $range ) {
-			if ( $quantity >= $range['min'] && ( empty( $range['max'] ) || $quantity <= $range['max'] ) ) {
-				return ( $price * $range['discount'] ) / 100;
+			$min = isset( $range['min'] ) ? (int) $range['min'] : 0;
+			$max = isset( $range['max'] ) ? (int) $range['max'] : null;
+			$discount_type = isset( $range['discount_type'] ) ? $range['discount_type'] : 'percentage';
+			$discount_value = isset( $range['discount_value'] ) ? (float) $range['discount_value'] : 0;
+			
+			if ( $quantity >= $min && ( $max === null || $quantity <= $max ) ) {
+				if ( $discount_type === 'percentage' ) {
+					return ( $price * $discount_value ) / 100;
+				} elseif ( $discount_type === 'fixed_price' ) {
+					return max( 0, $price - $discount_value );
+				} else {
+					return $discount_value;
+				}
 			}
 		}
 		
 		return 0;
+	}
+
+	/**
+	 * Get bulk pricing table for product
+	 *
+	 * @param int $product_id Product ID.
+	 * @return array|null
+	 */
+	public static function get_bulk_pricing_table( $product_id ) {
+		$rules = Rule::get_active_rules();
+		$product = wc_get_product( $product_id );
+		
+		if ( ! $product ) {
+			return null;
+		}
+		
+		foreach ( $rules as $rule ) {
+			if ( isset( $rule->bulk_ranges ) && is_array( $rule->bulk_ranges ) && count( $rule->bulk_ranges ) > 0 && self::product_matches_rule( $product_id, $rule ) ) {
+				$bulk_ranges = $rule->bulk_ranges;
+				
+				if ( is_array( $bulk_ranges ) && count( $bulk_ranges ) > 0 ) {
+					$settings = self::get_settings();
+					$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
+					
+					if ( $calculate_from === 'sale_price' && $product->get_sale_price() ) {
+						$base_price = $product->get_sale_price();
+					} else {
+						$base_price = $product->get_regular_price();
+					}
+					
+					return array(
+						'ranges' => $bulk_ranges,
+						'base_price' => $base_price,
+						'rule_title' => $rule->title,
+					);
+				}
+			}
+		}
+		
+		return null;
 	}
 }

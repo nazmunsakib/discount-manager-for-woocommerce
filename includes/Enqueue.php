@@ -64,14 +64,6 @@ class Enqueue {
 			array(),
 			DMWOO_VERSION
 		);
-
-		wp_enqueue_script(
-			'dmwoo-frontend',
-			DMWOO_PLUGIN_URL . 'assets/js/frontend.js',
-			array( 'jquery' ),
-			DMWOO_VERSION,
-			true
-		);
 	}
 
 	/**
