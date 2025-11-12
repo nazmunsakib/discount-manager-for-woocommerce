@@ -1,5 +1,6 @@
 === Discount Manager for WooCommerce ===
 Contributors: nazmunsakib
+Donate link: https://nazmunsakib.com
 Tags: woocommerce, discount, pricing, bulk discount, cart discount
 Requires at least: 5.0
 Tested up to: 6.8

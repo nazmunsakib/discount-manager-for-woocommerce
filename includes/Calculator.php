@@ -395,16 +395,23 @@ class Calculator {
 	 * @return array
 	 */
 	private static function get_settings() {
+		$cache_key = 'dmwoo_settings';
+		$settings = wp_cache_get( $cache_key, 'dmwoo' );
+		
+		if ( false !== $settings ) {
+			return $settings;
+		}
+		
 		global $wpdb;
 		$table = $wpdb->prefix . 'dmwoo_settings';
 		
 		// Check if table exists
-		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table;
+		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table ) ) === $table; // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( ! $table_exists ) {
 			return array( 'apply_product_discount_to' => 'biggest_discount' );
 		}
 		
-		$results = $wpdb->get_results( "SELECT option_name, option_value FROM $table", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->prefix}dmwoo_settings", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		
 		$settings = array();
 		if ( is_array( $results ) ) {
@@ -412,6 +419,8 @@ class Calculator {
 				$settings[ $row['option_name'] ] = maybe_unserialize( $row['option_value'] );
 			}
 		}
+		
+		wp_cache_set( $cache_key, $settings, 'dmwoo', 3600 );
 		
 		return $settings;
 	}

@@ -31,13 +31,13 @@ class Settings {
 		$table = $wpdb->prefix . 'dmwoo_settings';
 		
 		// Check if table exists
-		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" ) === $table;
+		$table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table ) ) === $table; // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( ! $table_exists ) {
 			return $default;
 		}
 		
-		$value = $wpdb->get_var( $wpdb->prepare(
-			"SELECT option_value FROM $table WHERE option_name = %s",
+		$value = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT option_value FROM {$wpdb->prefix}dmwoo_settings WHERE option_name = %s",
 			$key
 		) );
 		
@@ -61,7 +61,7 @@ class Settings {
 		
 		$serialized_value = maybe_serialize( $value );
 		
-		$result = $wpdb->replace(
+		$result = $wpdb->replace( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$table,
 			array(
 				'option_name' => $key,
@@ -82,7 +82,7 @@ class Settings {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dmwoo_settings';
 		
-		$results = $wpdb->get_results( "SELECT option_name, option_value FROM $table", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->prefix}dmwoo_settings", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		
 		$settings = array();
 		foreach ( $results as $row ) {

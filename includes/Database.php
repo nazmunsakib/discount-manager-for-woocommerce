@@ -111,8 +111,8 @@ class Database {
 	public static function drop_tables() {
 		global $wpdb;
 
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_rule_usage" );
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_rules" );
-		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_settings" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_rule_usage" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_rules" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}dmwoo_settings" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 }

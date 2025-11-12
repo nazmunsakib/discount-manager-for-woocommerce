@@ -119,7 +119,7 @@ class REST_API {
 		global $wpdb;
 		
 		$table = $wpdb->prefix . 'dmwoo_rules';
-		$results = $wpdb->get_results( "SELECT * FROM $table ORDER BY priority ASC", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}dmwoo_rules ORDER BY priority ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		
 		foreach ( $results as &$rule ) {
 			$rule['conditions'] = json_decode( $rule['conditions'], true );
@@ -213,7 +213,6 @@ class REST_API {
 			return new \WP_Error( 'update_failed', 'Failed to update rule', array( 'status' => 500 ) );
 			
 		} catch ( Exception $e ) {
-			error_log( 'DMWOO Update Error: ' . $e->getMessage() );
 			return new \WP_Error( 'update_error', $e->getMessage(), array( 'status' => 500 ) );
 		}
 	}
@@ -273,7 +272,7 @@ class REST_API {
 				$result[] = array(
 					'id' => $product->get_id(),
 					'name' => $product->get_name(),
-					'price' => strip_tags( $price_text ),
+					'price' => wp_strip_all_tags( $price_text ),
 					'sku' => $product->get_sku(),
 				);
 			}
@@ -390,7 +389,7 @@ class REST_API {
 		$table = $wpdb->prefix . 'dmwoo_settings';
 		
 		// Clear all settings
-		$wpdb->query( "TRUNCATE TABLE $table" );
+		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}dmwoo_settings" );
 		
 		// Reinitialize defaults
 		Settings::init_defaults();

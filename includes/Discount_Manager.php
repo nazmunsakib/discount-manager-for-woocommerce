@@ -96,7 +96,6 @@ class Discount_Manager {
 	 */
 	private function init_hooks() {
 		add_action( 'init', array( $this, 'init' ), 0 );
-		add_action( 'plugins_loaded', array( $this, 'load_plugin_textdomain' ) );
 		add_action( 'plugins_loaded', array( $this, 'check_database' ) );
 		register_activation_hook( DMWOO_PLUGIN_FILE, array( $this, 'activate' ) );
 		register_deactivation_hook( DMWOO_PLUGIN_FILE, array( $this, 'deactivate' ) );
@@ -124,12 +123,7 @@ class Discount_Manager {
 		}
 	}
 
-	/**
-	 * Load plugin text domain
-	 */
-	public function load_plugin_textdomain() {
-		load_plugin_textdomain( 'discount-manager-woocommerce', false, dirname( DMWOO_PLUGIN_BASENAME ) . '/languages' );
-	}
+
 
 	/**
 	 * Check and repair database if needed

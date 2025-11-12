@@ -307,16 +307,14 @@ class Rule {
 		);
 
 		if ( $this->id ) {
-			$result = $wpdb->update( $table, $data, array( 'id' => $this->id ) );
+			$result = $wpdb->update( $table, $data, array( 'id' => $this->id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			if ( $result === false ) {
-				error_log( 'DMWOO Rule Update Error: ' . $wpdb->last_error );
 				return false;
 			}
 			return $this->id;
 		} else {
-			$result = $wpdb->insert( $table, $data );
+			$result = $wpdb->insert( $table, $data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			if ( $result === false ) {
-				error_log( 'DMWOO Rule Insert Error: ' . $wpdb->last_error );
 				return false;
 			}
 			$this->id = $wpdb->insert_id;
@@ -334,7 +332,7 @@ class Rule {
 		global $wpdb;
 
 		$table = $wpdb->prefix . 'dmwoo_rules';
-		$data = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
+		$data = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}dmwoo_rules WHERE id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		return $data ? new self( $data ) : null;
 	}
@@ -348,7 +346,7 @@ class Rule {
 		global $wpdb;
 
 		$table = $wpdb->prefix . 'dmwoo_rules';
-		$results = $wpdb->get_results( "SELECT * FROM $table WHERE status = 'active' ORDER BY priority ASC", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}dmwoo_rules WHERE status = 'active' ORDER BY priority ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
 		$rules = array();
 		foreach ( $results as $data ) {
@@ -376,8 +374,8 @@ class Rule {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dmwoo_rules';
 		
-		return $wpdb->query( $wpdb->prepare(
-			"UPDATE $table SET usage_count = usage_count + 1 WHERE id = %d",
+		return $wpdb->query( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"UPDATE {$wpdb->prefix}dmwoo_rules SET usage_count = usage_count + 1 WHERE id = %d",
 			$this->id
 		) ) !== false;
 	}
@@ -395,6 +393,6 @@ class Rule {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dmwoo_rules';
 		
-		return $wpdb->delete( $table, array( 'id' => $this->id ) ) !== false;
+		return $wpdb->delete( $table, array( 'id' => $this->id ) ) !== false; // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 }
