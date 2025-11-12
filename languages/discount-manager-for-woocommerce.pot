@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Discount Manager for WooCommerce 1.0.0\n"
-"Report-Msgid-Bugs-To: https://github.com/nazmunsakib/discount-manager-woocommerce/issues\n"
+"Report-Msgid-Bugs-To: https://github.com/nazmunsakib/discount-manager-for-woocommerce/issues\n"
 "POT-Creation-Date: 2024-01-01 00:00:00+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "X-Generator: WP-CLI 2.9.0\n"
-"X-Domain: discount-manager-woocommerce\n"
+"X-Domain: discount-manager-for-woocommerce\n"
 
 #: includes/Admin.php
 msgid "Discount Manager"

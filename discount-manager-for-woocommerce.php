@@ -1,14 +1,14 @@
 <?php
 /**
  * Plugin Name: Discount Manager for WooCommerce
- * Plugin URI: https://github.com/nazmunsakib/discount-manager-woocommerce
+ * Plugin URI: https://github.com/nazmunsakib/discount-manager-for-woocommerce
  * Description: Simple to complex discount rules for your WooCommerce store. Core package.
  * Version: 1.0.0
  * Author: Nazmun Sakib
  * Author URI: https://nazmunsakib.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: discount-manager-woocommerce
+ * Text Domain: discount-manager-for-woocommerce
  * Domain Path: /languages
  * Requires at least: 5.0
  * Tested up to: 6.8

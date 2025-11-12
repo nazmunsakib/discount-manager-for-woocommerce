@@ -1,1 +1,1 @@
-# discount-manager-woocommerce
+# discount-manager-for-woocommerce

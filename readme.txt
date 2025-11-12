@@ -53,7 +53,7 @@ Within each rule type, you can choose how the discount is calculated:
 
 == Installation ==
 
-1. Upload the plugin files to the `/wp-content/plugins/discount-manager-woocommerce` directory, or install the plugin through the WordPress plugins screen directly.
+1. Upload the plugin files to the `/wp-content/plugins/discount-manager-for-woocommerce` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate the plugin through the 'Plugins' screen in WordPress.
 3. Ensure WooCommerce is installed and activated.
 4. Navigate to WooCommerce > Discount Manager to configure your discount rules.
@@ -119,4 +119,4 @@ Initial release of Discount Manager for WooCommerce.
 
 == Additional Information ==
 
-For support, feature requests, or bug reports, please visit the plugin's GitHub repository at https://github.com/nazmunsakib/discount-manager-woocommerce
+For support, feature requests, or bug reports, please visit the plugin's GitHub repository at https://github.com/nazmunsakib/discount-manager-for-woocommerce

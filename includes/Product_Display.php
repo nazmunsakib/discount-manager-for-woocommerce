@@ -151,14 +151,14 @@ class Product_Display {
 		
 		if ( $badge_setting === 'when_condition_matches' ) {
 			if ( Calculator::is_product_on_sale( $product_id ) ) {
-				return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-woocommerce' ) . '</span>';
+				return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-for-woocommerce' ) . '</span>';
 			}
 			return '';
 		}
 		
 		if ( $badge_setting === 'at_least_has_any_rules' ) {
 			if ( Calculator::is_product_on_sale( $product_id ) ) {
-				return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-woocommerce' ) . '</span>';
+				return '<span class="onsale">' . esc_html__( 'Sale!', 'discount-manager-for-woocommerce' ) . '</span>';
 			}
 			return '';
 		}
@@ -183,7 +183,7 @@ class Product_Display {
 		}
 		
 		echo '<div class="dmwoo-discount-bar">';
-		echo '<span class="dmwoo-discount-text">' . esc_html__( 'Special Discount Available!', 'discount-manager-woocommerce' ) . '</span>';
+		echo '<span class="dmwoo-discount-text">' . esc_html__( 'Special Discount Available!', 'discount-manager-for-woocommerce' ) . '</span>';
 		echo '</div>';
 	}
 
@@ -213,12 +213,12 @@ class Product_Display {
 		$base_price = $bulk_data['base_price'];
 		
 		echo '<div class="dmwoo-bulk-pricing-table">';
-		echo '<h4>' . esc_html__( 'Bulk Pricing', 'discount-manager-woocommerce' ) . '</h4>';
+		echo '<h4>' . esc_html__( 'Bulk Pricing', 'discount-manager-for-woocommerce' ) . '</h4>';
 		echo '<table>';
 		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Quantity', 'discount-manager-woocommerce' ) . '</th>';
-		echo '<th>' . esc_html__( 'Discount', 'discount-manager-woocommerce' ) . '</th>';
-		echo '<th>' . esc_html__( 'Price', 'discount-manager-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Quantity', 'discount-manager-for-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Discount', 'discount-manager-for-woocommerce' ) . '</th>';
+		echo '<th>' . esc_html__( 'Price', 'discount-manager-for-woocommerce' ) . '</th>';
 		echo '</tr></thead>';
 		echo '<tbody>';
 		
@@ -235,13 +235,13 @@ class Product_Display {
 			}
 			
 			if ( $discount_type === 'percentage' ) {
-				$discount_text = $discount_value . '% ' . esc_html__( 'off', 'discount-manager-woocommerce' );
+				$discount_text = $discount_value . '% ' . esc_html__( 'off', 'discount-manager-for-woocommerce' );
 				$final_price = $base_price - ( ( $base_price * $discount_value ) / 100 );
 			} elseif ( $discount_type === 'fixed_price' ) {
-				$discount_text = esc_html__( 'Fixed price', 'discount-manager-woocommerce' );
+				$discount_text = esc_html__( 'Fixed price', 'discount-manager-for-woocommerce' );
 				$final_price = $discount_value;
 			} else {
-				$discount_text = wc_price( $discount_value ) . ' ' . esc_html__( 'off', 'discount-manager-woocommerce' );
+				$discount_text = wc_price( $discount_value ) . ' ' . esc_html__( 'off', 'discount-manager-for-woocommerce' );
 				$final_price = $base_price - $discount_value;
 			}
 			

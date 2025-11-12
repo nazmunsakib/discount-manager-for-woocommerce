@@ -33,8 +33,8 @@ class Admin {
 	public function admin_menu() {
 		add_submenu_page(
 			'woocommerce',
-			__( 'Discount Manager', 'discount-manager-woocommerce' ),
-			__( 'Discount Manager', 'discount-manager-woocommerce' ),
+			__( 'Discount Manager', 'discount-manager-for-woocommerce' ),
+			__( 'Discount Manager', 'discount-manager-for-woocommerce' ),
 			'manage_options',
 			'discount-manager',
 			array( $this, 'admin_page' )
@@ -68,7 +68,7 @@ class Admin {
 					<circle cx="12" cy="16" r="2" fill="white"/>
 					<path d="M9 9H15" stroke="white" stroke-width="2" stroke-linecap="round"/>
 				</svg>
-				<h1><?php esc_html_e( 'Discount Manager', 'discount-manager-woocommerce' ); ?></h1>
+				<h1><?php esc_html_e( 'Discount Manager', 'discount-manager-for-woocommerce' ); ?></h1>
 			</div>
 			<div id="dmwoo-admin-root">
 				<div class="dmwoo-settings-loader">

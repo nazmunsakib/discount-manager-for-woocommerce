@@ -266,7 +266,7 @@ class REST_API {
 				} elseif ( $price ) {
 					$price_text = wc_price( $price );
 				} else {
-					$price_text = __( 'Price not set', 'discount-manager-woocommerce' );
+					$price_text = __( 'Price not set', 'discount-manager-for-woocommerce' );
 				}
 				
 				$result[] = array(

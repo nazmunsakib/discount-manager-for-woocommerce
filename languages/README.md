@@ -4,16 +4,16 @@ This directory contains translation files for the Discount Manager for WooCommer
 
 ## File Structure
 
-- `discount-manager-woocommerce.pot` - Template file for translations
-- `discount-manager-woocommerce-{locale}.po` - Translation files for specific languages
-- `discount-manager-woocommerce-{locale}.mo` - Compiled translation files
+- `discount-manager-for-woocommerce.pot` - Template file for translations
+- `discount-manager-for-woocommerce-{locale}.po` - Translation files for specific languages
+- `discount-manager-for-woocommerce-{locale}.mo` - Compiled translation files
 
 ## How to Translate
 
-1. Copy `discount-manager-woocommerce.pot` to `discount-manager-woocommerce-{locale}.po`
-   - Example: `discount-manager-woocommerce-es_ES.po` for Spanish (Spain)
-   - Example: `discount-manager-woocommerce-fr_FR.po` for French (France)
-   - Example: `discount-manager-woocommerce-de_DE.po` for German (Germany)
+1. Copy `discount-manager-for-woocommerce.pot` to `discount-manager-for-woocommerce-{locale}.po`
+   - Example: `discount-manager-for-woocommerce-es_ES.po` for Spanish (Spain)
+   - Example: `discount-manager-for-woocommerce-fr_FR.po` for French (France)
+   - Example: `discount-manager-for-woocommerce-de_DE.po` for German (Germany)
 
 2. Use a translation tool like Poedit (https://poedit.net/) to translate the strings
 
@@ -37,9 +37,9 @@ This directory contains translation files for the Discount Manager for WooCommer
 ## Contributing Translations
 
 If you would like to contribute a translation, please submit a pull request to:
-https://github.com/nazmunsakib/discount-manager-woocommerce
+https://github.com/nazmunsakib/discount-manager-for-woocommerce
 
 ## WordPress.org Translations
 
 Once the plugin is published on WordPress.org, translations can also be contributed through:
-https://translate.wordpress.org/projects/wp-plugins/discount-manager-woocommerce
+https://translate.wordpress.org/projects/wp-plugins/discount-manager-for-woocommerce
