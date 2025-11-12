@@ -430,6 +430,10 @@ class Calculator {
 		
 		$rules = Rule::get_active_rules();
 		foreach ( $rules as $rule ) {
+			// Skip cart adjustment rules
+			if ( $rule->apply_as_cart_rule == 1 ) {
+				continue;
+			}
 			if ( self::product_matches_rule( $product_id, $rule ) ) {
 				return true;
 			}
@@ -495,6 +499,11 @@ class Calculator {
 		$apply_method = $settings['apply_product_discount_to'] ?? 'biggest_discount';
 		
 		foreach ( $rules as $rule ) {
+			// Skip cart adjustment rules - they don't affect product display prices
+			if ( $rule->apply_as_cart_rule == 1 ) {
+				continue;
+			}
+			
 			if ( self::product_matches_rule( $product_id, $rule ) ) {
 				$calculate_from = isset( $settings['calculate_from'] ) ? $settings['calculate_from'] : 'regular_price';
 				
